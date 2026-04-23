@@ -102,7 +102,8 @@ with st.sidebar:
     st.markdown("Ingresa los detalles para calcular los tabuladores.")
     
     envase_seleccionado = st.selectbox("1. Selecciona el Envase:", df_envases['Etiqueta_UI'].tolist())
-    densidad = st.number_input("2. Densidad del Producto (Kg/L):", min_value=0.1, value=1.0, step=0.1)
+    densidades_opciones = [1.0, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08]
+    densidad = st.selectbox("2. Densidad del Producto (Kg/L):", densidades_opciones)
     piezas = st.number_input("3. Número de Piezas:", min_value=1, value=1, step=1)
     precio_unitario = st.number_input("4. Precio de Venta Unitario ($):", min_value=1.0, value=350.0, step=10.0, help="Requerido para determinar tarifas de Amazon y Mercado Libre.")
     
