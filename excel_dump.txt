@@ -1,0 +1,166 @@
+Sheet names: ['PRODUCTOS ENVASE', 'FW1A', 'SHE', 'Hoja1', 'Hoja2']
+
+### Sheet: PRODUCTOS ENVASE
+Columns: ['Unnamed: 0', 'Unnamed: 1', 'Unnamed: 2', 'Manos', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7', 'Cuerpo', 'Unnamed: 9', 'Unnamed: 10', 'Unnamed: 11', 'Unnamed: 12', 'Cabello', 'Unnamed: 14', 'Manos.1', 'Cuerpo.1', 'Cabello.1']
+Head:
+    Unnamed: 0 Unnamed: 1 Unnamed: 2  ... Manos.1  Cuerpo.1 Cabello.1
+0      Botella        NaN        NaN  ...    4.37      4.37      4.37
+1         Tapa        NaN        NaN  ...    2.78      1.17      1.17
+2     Etiqueta        NaN        NaN  ...    1.00      1.00      1.00
+3         Caja        NaN        NaN  ...    3.70      3.70      3.70
+4          NaN        NaN        NaN  ...   11.85     10.24     10.24
+5     M. prima        NaN        NaN  ...     NaN       NaN       NaN
+6         LESS         19         10  ...     NaN       NaN       NaN
+7      BETAINA       32.1          6  ...     NaN       NaN       NaN
+8      COCO 85      61.73          4  ...     NaN       NaN       NaN
+9       TRIETA       45.5          2  ...     NaN       NaN       NaN
+10   TRICLOSAN       1170       0.15  ...     NaN       NaN       NaN
+11         NaN        NaN        NaN  ...     NaN       NaN       NaN
+12         NaN        NaN        NaN  ...     NaN       NaN       NaN
+13         NaN        NaN        NaN  ...     NaN       NaN       NaN
+14      M.obra        NaN        NaN  ...     NaN       NaN       NaN
+15         NaN        NaN        NaN  ...     NaN       NaN       NaN
+16    M. prima        NaN        NaN  ...     NaN       NaN       NaN
+17  Producción        NaN        NaN  ...     NaN       NaN       NaN
+18  Etiquetado        NaN        NaN  ...     NaN       NaN       NaN
+19     Llenado        NaN        NaN  ...     NaN       NaN       NaN
+20    Envasado        NaN        NaN  ...     NaN       NaN       NaN
+21         NaN        NaN        NaN  ...     NaN       NaN       NaN
+22         NaN        NaN        NaN  ...     NaN       NaN       NaN
+23         NaN        NaN        NaN  ...     NaN       NaN       NaN
+24         NaN        NaN        NaN  ...     NaN       NaN       NaN
+25         NaN      Manos     Cuerpo  ...     NaN       NaN       NaN
+26     Botella       4.53       4.53  ...     NaN       NaN       NaN
+27        Tapa       2.78       1.17  ...     NaN       NaN       NaN
+28    Etiqueta          1          1  ...     NaN       NaN       NaN
+29        Caja        3.7        3.7  ...     NaN       NaN       NaN
+30   Sub Total      12.01       10.4  ...     NaN       NaN       NaN
+31         NaN        NaN        NaN  ...     NaN       NaN       NaN
+32    M. prima       10.5       12.5  ...     NaN       NaN       NaN
+33  Producción        NaN        NaN  ...     NaN       NaN       NaN
+34  Etiquetado        NaN        NaN  ...     NaN       NaN       NaN
+35     Llenado        NaN        NaN  ...     NaN       NaN       NaN
+36    Envasado        NaN        NaN  ...     NaN       NaN       NaN
+37         NaN        NaN        NaN  ...     NaN       NaN       NaN
+38       Total      22.51       22.9  ...     NaN       NaN       NaN
+
+[39 rows x 18 columns]
+
+### Sheet: FW1A
+Columns: ['Unnamed: 0', 'Producto', 'Clave', 'Suma', 'Densidad', 'Aroma', 'Categoria', 'Descripción']
+Head:
+    Unnamed: 0  ...                                        Descripción
+0          NaN  ...  Desengrasante desinfectante oxigenado y aceite...
+1          NaN  ...  Desengrasante desinfectante removedor de resid...
+2          NaN  ...  Desengrasante desinfectante removedor de resid...
+3          NaN  ...  Desengrasante desinfectante removedor de resid...
+4          NaN  ...  Desengrasante desinfectante removedor de resid...
+5          NaN  ...  Desengrasante desinfectante removedor de resid...
+6          NaN  ...  Desengrasante desinfectante removedor de resid...
+7          NaN  ...  Desincrustante, desengrasante residuos calcare...
+8          NaN  ...  Desengrasante desinfectante removedor de resid...
+9          NaN  ...  Desengrasante desinfectante removedor de resid...
+10         NaN  ...  Líquido  Biodegradable jabón shampoo bacterios...
+11         NaN  ...  Líquido  Biodegradable jabón shampoo bacterios...
+12         NaN  ...  Líquido  Biodegradable jabón shampoo bacterios...
+13         NaN  ...  Líquido  Biodegradable jabón shampoo bacterios...
+14         NaN  ...  Líquido  Biodegradable jabón shampoo bacterios...
+15         NaN  ...  Líquido  Biodegradable jabón shampoo bacterios...
+16         NaN  ...  Líquido  Biodegradable jabón shampoo bacterios...
+17         NaN  ...  Líquido  Biodegradable jabón shampoo bacterios...
+18         NaN  ...  Líquido  Biodegradable jabón shampoo bacterios...
+19         NaN  ...  Líquido  Biodegradable jabón shampoo bacterios...
+
+[20 rows x 8 columns]
+
+### Sheet: SHE
+Columns: ['IDNOMBREPRODUCTO', 'Producto', 'Clave', 'Suma', 'Densidad', 'Aroma', 'Categoria', 'Descripción']
+Head:
+   IDNOMBREPRODUCTO  ...                                        Descripción
+0               265  ...  Líquido  Biodegradable jabón shampoo bacterios...
+1               343  ...  Líquido  Biodegradable jabón shampoo bacterios...
+2               346  ...  Líquido  Biodegradable jabón shampoo bacterios...
+3               349  ...  Líquido  Biodegradable jabón shampoo bacterios...
+4               372  ...  Líquido  Biodegradable jabón shampoo bacterios...
+5               373  ...  Líquido  Biodegradable jabón shampoo bacterios...
+6               374  ...  Líquido  Biodegradable jabón shampoo bacterios...
+7               375  ...  Líquido  Biodegradable jabón shampoo bacterios...
+8               376  ...  Líquido  Biodegradable jabón shampoo bacterios...
+9               377  ...  Líquido  Biodegradable jabón shampoo bacterios...
+
+[10 rows x 8 columns]
+
+### Sheet: Hoja1
+Columns: ['IDNOMBREPRODUCTO', 'Producto', 'Clave', 'Suma', 'Densidad', 'Aroma', 'Categoria', 'Descripción']
+Head:
+   IDNOMBREPRODUCTO  ...                                        Descripción
+0               265  ...  Líquido  Biodegradable jabón shampoo bacterios...
+1               343  ...  Líquido  Biodegradable jabón shampoo bacterios...
+2               346  ...  Líquido  Biodegradable jabón shampoo bacterios...
+3               349  ...  Líquido  Biodegradable jabón shampoo bacterios...
+4               372  ...  Líquido  Biodegradable jabón shampoo bacterios...
+5               373  ...  Líquido  Biodegradable jabón shampoo bacterios...
+6               374  ...  Líquido  Biodegradable jabón shampoo bacterios...
+7               375  ...  Líquido  Biodegradable jabón shampoo bacterios...
+8               376  ...  Líquido  Biodegradable jabón shampoo bacterios...
+9               377  ...  Líquido  Biodegradable jabón shampoo bacterios...
+
+[10 rows x 8 columns]
+
+### Sheet: Hoja2
+Columns: ['PARIDAD', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7', 'Unnamed: 8']
+Head:
+                  PARIDAD   Unnamed: 1  ... Unnamed: 7        Unnamed: 8
+0                  Envase          NaN  ...        NaN               NaN
+1                    tapa          NaN  ...        NaN               NaN
+2              etiquetado          NaN  ...        NaN               NaN
+3              Empaque 1°          NaN  ...        NaN               NaN
+4                Embalaje  Embalaje Kg  ...        NaN               NaN
+5                     NaN    Tarima Kg  ...        NaN               NaN
+6          4 lts a 57 lts          NaN  ...        NaN               NaN
+7                STANDART          NaN  ...        NaN               NaN
+8              Publicidad        0.125  ...      0.125   Publicidad / Lt
+9                   IVISA         0.35  ...      0.450        IVISA / Lt
+10               Asociado         0.55  ...      0.650     Asociado / Lt
+11            Supervición          0.1  ...      0.100  Supervisión / Lt
+12     60 lts a 239.4 lts          NaN  ...        NaN               NaN
+13               STANDART          NaN  ...        NaN               NaN
+14             Publicidad        0.125  ...      0.125   Publicidad / Lt
+15                  IVISA        0.345  ...      0.400        IVISA / Lt
+16               Asociado         0.55  ...      0.650     Asociado / Lt
+17            Supervición          0.1  ...      0.100  Supervisión / Lt
+18    240 lts a 497.8 lts          NaN  ...        NaN               NaN
+19               STANDART          NaN  ...        NaN               NaN
+20             Publicidad        0.125  ...      0.125   Publicidad / Lt
+21                  IVISA         0.34  ...      0.350        IVISA / Lt
+22               Asociado         0.55  ...      0.650     Asociado / Lt
+23            Supervición         0.09  ...      0.100  Supervisión / Lt
+24    500 lts a 748.6 lts          NaN  ...        NaN               NaN
+25               STANDART          NaN  ...        NaN               NaN
+26             Publicidad        0.125  ...      0.125   Publicidad / Lt
+27                  IVISA        0.335  ...      0.300        IVISA / Lt
+28               Asociado         0.55  ...      0.650     Asociado / Lt
+29            Supervición         0.08  ...      0.100  Supervisión / Lt
+30    750 lts a 999.4 lts          NaN  ...        NaN               NaN
+31               STANDART          NaN  ...        NaN               NaN
+32             Publicidad        0.125  ...      0.125   Publicidad / Lt
+33                  IVISA         0.33  ...      0.250        IVISA / Lt
+34               Asociado         0.55  ...      0.650     Asociado / Lt
+35            Supervición         0.07  ...      0.100  Supervisión / Lt
+36  1,000 lts a 1,500 lts          NaN  ...        NaN               NaN
+37               STANDART          NaN  ...        NaN               NaN
+38             Publicidad          0.1  ...      0.125   Publicidad / Lt
+39                  IVISA        0.325  ...      0.200        IVISA / Lt
+40               Asociado         0.55  ...      0.650     Asociado / Lt
+41            Supervición         0.07  ...      0.100  Supervisión / Lt
+42                    NaN          NaN  ...        NaN               NaN
+43          PRORRATEABLES          NaN  ...        NaN               NaN
+44            Operaciones          0.1  ...        NaN               NaN
+45          Mantenimiento         0.02  ...        NaN               NaN
+46           Equipamiento         0.03  ...        NaN               NaN
+47              Traslados          0.1  ...        NaN               NaN
+48        Administrativos         0.15  ...        NaN               NaN
+49             Operativos         0.15  ...        NaN               NaN
+
+[50 rows x 9 columns]
+

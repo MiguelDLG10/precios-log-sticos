@@ -36,10 +36,20 @@ def generate_pdf(data):
 
     # Propiedades Físicas
     pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "Pesos Calculados", ln=True)
+    pdf.cell(0, 10, "Pesos Calculados y Volumen", ln=True)
     pdf.set_font("Arial", size=12)
     pdf.cell(0, 8, f"- Peso Bruto Unitario: {data['peso_unitario']:,.2f} Kg", ln=True)
     pdf.cell(0, 8, f"- Peso Bruto Total: {data['peso_total']:,.2f} Kg", ln=True)
+    pdf.ln(5)
+
+    # Costos de Producción
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, "Integracion de Produccion", ln=True)
+    pdf.set_font("Arial", size=12)
+    costo_prod = data.get('costo_prod_mxn', 0)
+    pdf.cell(0, 8, f"- Costo Total Interno: ${costo_prod:,.2f} MXN", ln=True)
+    pdf.set_font("Arial", "I", 10)
+    pdf.cell(0, 8, f"  (Basado en Costos Prorrateables + Categorias tabuladas de PIZARRON)", ln=True)
     pdf.ln(5)
 
     # Cotizaciones
@@ -73,6 +83,16 @@ def generate_pdf(data):
             pdf.cell(0, 6, f"   Costo Logistico Total: ${c_tot:,.2f}", ln=True)
             if c_pz is not None:
                 pdf.cell(0, 6, f"   Costo Logistico por Pieza: ${c_pz:,.2f}", ln=True)
+            
+            # Utilidad Neta
+            ingreso_total = data['precio_unitario'] * data['piezas']
+            utilidad = ingreso_total - (c_tot + data.get('costo_prod_mxn', 0))
+            pdf.set_font("Arial", "B", 12)
+            if utilidad > 0:
+                pdf.set_text_color(34, 139, 34) # Verde
+            else:
+                pdf.set_text_color(220, 20, 60) # Rojo
+            pdf.cell(0, 8, f"   UTILIDAD NETA FINAL: ${utilidad:,.2f} MXN", ln=True)
         pdf.ln(4)
 
     # Output pdf file temporarily and read bytes to avoid version string return issues with PyFPDF and FPDF2

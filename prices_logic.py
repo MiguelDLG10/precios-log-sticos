@@ -1,5 +1,125 @@
 import pandas as pd
 import re
+import json
+import os
+
+CONFIG_FILE = 'costos_config.json'
+
+DEFAULT_PRODUCTION_COSTS = {
+    "prorrateables": {
+        "Operaciones": 0.1,
+        "Mantenimiento": 0.02,
+        "Equipamiento": 0.03,
+        "Traslados": 0.1,
+        "Administrativos": 0.15,
+        "Operativos": 0.15
+    },
+    "rangos_volumen": [
+        {
+            "max_litros": 59.9,
+            "categorias": {
+                "STANDART": {"Publicidad": 0.125, "IVISA": 0.35, "Asociado": 0.55, "Supervicion": 0.1},
+                "GENERICO": {"Publicidad": 0.12, "IVISA": 0.25, "Asociado": 0.35, "Supervicion": 0.065},
+                "PREMIUM": {"Publicidad": 0.125, "IVISA": 0.45, "Asociado": 0.65, "Supervicion": 0.1}
+            }
+        },
+        {
+            "max_litros": 239.9,
+            "categorias": {
+                "STANDART": {"Publicidad": 0.125, "IVISA": 0.345, "Asociado": 0.55, "Supervicion": 0.1},
+                "GENERICO": {"Publicidad": 0.12, "IVISA": 0.245, "Asociado": 0.35, "Supervicion": 0.065},
+                "PREMIUM": {"Publicidad": 0.125, "IVISA": 0.40, "Asociado": 0.65, "Supervicion": 0.1}
+            }
+        },
+        {
+            "max_litros": 499.9,
+            "categorias": {
+                "STANDART": {"Publicidad": 0.125, "IVISA": 0.34, "Asociado": 0.55, "Supervicion": 0.09},
+                "GENERICO": {"Publicidad": 0.12, "IVISA": 0.24, "Asociado": 0.35, "Supervicion": 0.055},
+                "PREMIUM": {"Publicidad": 0.125, "IVISA": 0.35, "Asociado": 0.65, "Supervicion": 0.1}
+            }
+        },
+        {
+            "max_litros": 749.9,
+            "categorias": {
+                "STANDART": {"Publicidad": 0.125, "IVISA": 0.335, "Asociado": 0.55, "Supervicion": 0.08},
+                "GENERICO": {"Publicidad": 0.12, "IVISA": 0.235, "Asociado": 0.35, "Supervicion": 0.045},
+                "PREMIUM": {"Publicidad": 0.125, "IVISA": 0.30, "Asociado": 0.65, "Supervicion": 0.1}
+            }
+        },
+        {
+            "max_litros": 999.9,
+            "categorias": {
+                "STANDART": {"Publicidad": 0.125, "IVISA": 0.33, "Asociado": 0.55, "Supervicion": 0.07},
+                "GENERICO": {"Publicidad": 0.12, "IVISA": 0.23, "Asociado": 0.35, "Supervicion": 0.035},
+                "PREMIUM": {"Publicidad": 0.125, "IVISA": 0.25, "Asociado": 0.65, "Supervicion": 0.1}
+            }
+        },
+        {
+            "max_litros": 999999.9,
+            "categorias": {
+                "STANDART": {"Publicidad": 0.10, "IVISA": 0.325, "Asociado": 0.55, "Supervicion": 0.07},
+                "GENERICO": {"Publicidad": 0.12, "IVISA": 0.225, "Asociado": 0.35, "Supervicion": 0.035},
+                "PREMIUM": {"Publicidad": 0.125, "IVISA": 0.20, "Asociado": 0.65, "Supervicion": 0.1}
+            }
+        }
+    ]
+}
+
+def load_production_costs():
+    if not os.path.exists(CONFIG_FILE):
+        return DEFAULT_PRODUCTION_COSTS
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return DEFAULT_PRODUCTION_COSTS
+
+def save_production_costs(data):
+    try:
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4)
+        return True
+    except Exception as e:
+        print(f"Error guardando costos: {e}")
+        return False
+
+def get_production_costs_detailed(volumen_lts, categoria):
+    """
+    Retorna el costo de producción total por litro (en USD) 
+    y el desglose detallado de qué prorrateables y variables aplican.
+    """
+    data = load_production_costs()
+    
+    prorrateables = data.get("prorrateables", {})
+    costo_fijo = sum(prorrateables.values())
+    
+    categoria = categoria.upper()
+    cat_costs = {}
+    
+    for rango in data.get("rangos_volumen", []):
+        if volumen_lts <= rango["max_litros"]:
+            cat_costs = rango.get("categorias", {}).get(categoria, {})
+            break
+            
+    if not cat_costs and len(data.get("rangos_volumen", [])) > 0:
+        cat_costs = data["rangos_volumen"][-1].get("categorias", {}).get(categoria, {})
+        
+    costo_variable = sum(cat_costs.values())
+    total_costo = costo_fijo + costo_variable
+    
+    desglose = {
+        "Prorrateables": prorrateables,
+        "Variables": cat_costs,
+        "Total_USD": total_costo
+    }
+    
+    return total_costo, desglose
+
+def get_production_costs(volumen_lts, categoria):
+    """Retorna solo el numero por compatibilidad anterior"""
+    val, _ = get_production_costs_detailed(volumen_lts, categoria)
+    return val
 
 def clean_capacity(capacity_str):
     if pd.isna(capacity_str):
@@ -92,20 +212,6 @@ def get_cost(weight_kg, platform, sub_tariff=None):
     """
     Retorna el costo de envío dependiendo del peso y la plataforma.
     """
-    if platform == "Paquetexpress" and weight_kg >= 60.0:
-        carga_rates = {
-            "0 a 400 km": 5.99,
-            "401 a 800 km": 7.95,
-            "801 a 1,200 km": 12.88,
-            "1,201 a 1,600 km": 16.10,
-            "1,601 a 2,000 km": 18.20,
-            "2,001 a 2,400 km": 20.34,
-            "Mayor a 2,400 km": 22.44,
-        }
-        if sub_tariff in carga_rates:
-            return weight_kg * carga_rates[sub_tariff]
-        return -1 # Indica fuera de rango / no encontrado
-
     if platform not in TARIFFS:
         return None
     
@@ -117,9 +223,37 @@ def get_cost(weight_kg, platform, sub_tariff=None):
     else:
         # Si no encaja, retornar None o el default
         return None
-        
-    for min_w, max_w, cost in ranges:
-        if min_w <= weight_kg <= max_w:
+
+    # En Paquetexpress si el peso excede el límite superior de la tabla (59.9), usa tarifa de carga
+    if platform == "Paquetexpress":
+        max_limit = ranges[-1][1]
+        # Redondeamos el peso a 1 decimal para evitar gaps minúsculos como 59.95
+        w_rounded = round(weight_kg, 1)
+        if w_rounded > max_limit:
+            carga_rates = {
+                "0 a 400 km": 5.99,
+                "401 a 800 km": 7.95,
+                "801 a 1,200 km": 12.88,
+                "1,201 a 1,600 km": 16.10,
+                "1,601 a 2,000 km": 18.20,
+                "2,001 a 2,400 km": 20.34,
+                "Mayor a 2,400 km": 22.44,
+            }
+            if sub_tariff in carga_rates:
+                return weight_kg * carga_rates[sub_tariff]
+            return -1
+
+    # Redondear el peso a 1 decimal soluciona los problemas de huecos "gaps" que hay entre rangos de la tabla.
+    # Ejemplo: en paquetexpress hay 5.9 -> 6.0 . Un peso de 5.95 tiraba error. Ahora será 6.0.
+    weight_kg_rounded = round(weight_kg, 1)
+    
+    for i, (min_w, max_w, cost) in enumerate(ranges):
+        if min_w <= weight_kg_rounded <= max_w:
+            return cost
+            
+        # Parche de seguridad para gaps intermedios por si la lista no es perfectamente contigua y el redondedo no basta
+        elif weight_kg_rounded < min_w and i > 0 and weight_kg_rounded > ranges[i-1][1]:
+            # Cayó justo en medio del rango anterior y este. Le cobramos la del rango actual superior
             return cost
             
     return -1 # Indica fuera de rango (ej. excede el máximo)
