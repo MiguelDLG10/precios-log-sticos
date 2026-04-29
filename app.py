@@ -10,66 +10,230 @@ st.set_page_config(page_title="Organizador de Precios", layout="wide", page_icon
 def local_css():
     st.markdown("""
     <style>
+    /* Importar fuente Inter de Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    /* ============================================ */
+    /*  DISEÑO PREMIUM - ALTA VISIBILIDAD          */
+    /* ============================================ */
+
     /* Fondo principal y tipografía */
     .stApp {
-        background: linear-gradient(135deg, #0d1117, #161b22);
-        color: #c9d1d9;
-        font-family: 'Inter', sans-serif;
+        background: linear-gradient(145deg, #0f172a 0%, #1e1b4b 40%, #0f172a 100%);
+        color: #e2e8f0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* Mejorar legibilidad global de Streamlit */
+    .stApp p, .stApp li, .stApp span, .stApp label, .stApp div {
+        color: #f1f5f9 !important;
+        font-size: 1.15rem !important;
+    }
+
+    /* Headers principales */
+    .stApp h1 {
+        color: #ffffff !important;
+        font-size: 2.8rem !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.02em;
+        text-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+    }
+
+    .stApp h2 {
+        color: #ffffff !important;
+        font-size: 2.2rem !important;
+        font-weight: 700 !important;
+    }
+
+    .stApp h3 {
+        color: #ffffff !important;
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
+    }
+
+    /* Sidebar mejorado */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%) !important;
+        border-right: 1px solid rgba(99, 102, 241, 0.2);
+    }
+
+    section[data-testid="stSidebar"] .stMarkdown p,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] .stMarkdown span {
+        color: #f1f5f9 !important;
+        font-size: 1.2rem !important;
+    }
+
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        color: #ffffff !important;
+    }
+
+    /* Inputs del sidebar */
+    section[data-testid="stSidebar"] .stSelectbox label,
+    section[data-testid="stSidebar"] .stNumberInput label {
+        color: #67e8f9 !important;
+        font-weight: 600 !important;
+        font-size: 1.2rem !important;
     }
 
     /* Ocultar elementos por defecto de Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Contenedor tipo Glassmorphism para las tarjetas */
+    /* ============================================ */
+    /*  TARJETAS GLASSMORPHISM MEJORADAS            */
+    /* ============================================ */
     .glass-card {
-        background: rgba(255, 255, 255, 0.05); /* Ligeramente translúcido */
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        padding: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 
+            0 8px 32px 0 rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.06);
         margin-bottom: 20px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
     }
     
     .glass-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+        transform: translateY(-4px);
+        box-shadow: 
+            0 16px 48px 0 rgba(99, 102, 241, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        border-color: rgba(99, 102, 241, 0.45);
     }
     
     /* Títulos dentro de las tarjetas */
     .card-title {
-        color: #58a6ff;
-        font-weight: 600;
-        margin-bottom: 15px;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-        padding-bottom: 10px;
-        font-size: 1.25rem;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        margin-bottom: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        padding-bottom: 12px;
+        font-size: 1.6rem !important;
+        letter-spacing: -0.01em;
     }
 
-    /* Valores destacados */
+    /* Valores destacados — GRANDES y BRILLANTES */
     .highlight-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #79c0ff;
-        margin: 10px 0;
+        font-size: 2.6rem !important;
+        font-weight: 800 !important;
+        color: #67e8f9 !important;
+        -webkit-text-fill-color: #67e8f9 !important;
+        text-shadow: 0 0 20px rgba(103, 232, 249, 0.25);
+        margin: 12px 0;
+        line-height: 1.2;
     }
     
-    /* Etiquetas pequeñas */
+    /* Etiquetas — VISIBLES con color BLANCO */
     .metric-label {
-        font-size: 0.9rem;
-        color: #8b949e;
+        font-size: 1.2rem !important;
+        color: #e2e8f0 !important;
+        -webkit-text-fill-color: #e2e8f0 !important;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.08em;
+        font-weight: 600 !important;
     }
     
     /* Logos o iconos (estilizados texto) */
     .platform-icon {
-        font-size: 24px;
+        font-size: 28px;
         margin-right: 10px;
         vertical-align: middle;
+    }
+
+    /* ============================================ */
+    /*  TABLAS / DATAFRAMES                         */
+    /* ============================================ */
+    .stDataFrame {
+        font-size: 1.15rem !important;
+    }
+
+    .stDataFrame th {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 1.15rem !important;
+    }
+
+    .stDataFrame td {
+        color: #f1f5f9 !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* ============================================ */
+    /*  TABS MEJORADOS                              */
+    /* ============================================ */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        color: #f1f5f9 !important;
+        font-size: 1.3rem !important;
+        font-weight: 600 !important;
+        padding: 12px 28px !important;
+        border-radius: 12px 12px 0 0 !important;
+    }
+
+    .stTabs [aria-selected="true"] {
+        color: #ffffff !important;
+        background: rgba(99, 102, 241, 0.15) !important;
+        border-bottom: 3px solid #818cf8 !important;
+    }
+
+    /* ============================================ */
+    /*  BOTONES                                     */
+    /* ============================================ */
+    .stDownloadButton > button,
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+        color: #ffffff !important;
+        border: none !important;
+        font-size: 1.3rem !important;
+        font-weight: 700 !important;
+        padding: 12px 28px !important;
+        border-radius: 12px !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+    }
+
+    .stDownloadButton > button:hover,
+    .stButton > button[kind="primary"]:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4) !important;
+    }
+
+    /* ============================================ */
+    /*  EXPANDER                                    */
+    /* ============================================ */
+    .streamlit-expanderHeader {
+        color: #ffffff !important;
+        font-size: 1.3rem !important;
+        font-weight: 600 !important;
+    }
+
+    /* ============================================ */
+    /*  CAPTIONS Y TEXTOS SECUNDARIOS               */
+    /* ============================================ */
+    .stCaption, small, .stApp small {
+        color: #e2e8f0 !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* Separadores */
+    hr {
+        border-color: rgba(99, 102, 241, 0.2) !important;
+    }
+
+    /* Mejorar select boxes y number inputs */
+    .stSelectbox > div > div,
+    .stNumberInput > div > div > input {
+        color: #ffffff !important;
+        font-size: 1.2rem !important;
     }
     
     </style>
@@ -142,7 +306,7 @@ with tab_calc:
         <div class="glass-card">
             <div class="metric-label">{title}</div>
             <div class="highlight-value">{value:.2f} {unit}</div>
-            <div style="font-size: 0.8rem; color: #8b949e;">{subtext}</div>
+            <div style="font-size: 1.15rem; color: #e2e8f0; margin-top: 6px;">{subtext}</div>
         </div>
         """
 
@@ -211,7 +375,7 @@ with tab_calc:
 
     def create_platform_card(platform_name, icon, total_cost, info_subtarifa, p_venta_tot, c_prod_mxn):
         margen_str = "---"
-        margen_color = "#c9d1d9"
+        margen_color = "#e2e8f0"
         
         if total_cost is None:
             cost_str = "No aplica"
@@ -232,13 +396,13 @@ with tab_calc:
         <div class="glass-card">
             <div class="card-title"><span class="platform-icon">{icon}</span>{platform_name}</div>
             <div class="metric-label">Costo Logístico Estimado</div>
-            <div class="highlight-value" style="color: #58a6ff; font-size: 1.4rem;">{cost_str}</div>
+            <div class="highlight-value" style="font-size: 2.2rem;">{cost_str}</div>
             <div class="metric-label">Utilidad Bruta (Venta vs Gastos)</div>
-            <div style="font-size: 1.6rem; font-weight: 700; margin-top: 5px; color: {margen_color};">{margen_str}</div>
-            <div style="margin-top: 15px; font-size: 0.8rem; color: #8b949e; border-top: 1px dotted #30363d; padding-top: 10px;">
-                Tarifa logística: {info_subtarifa} <br><br>
-                <i>Ingreso: ${p_venta_tot:,.2f} MXN</i><br>
-                <i>C. Producción: -${c_prod_mxn:,.2f} MXN</i>
+            <div style="font-size: 2.2rem; font-weight: 800; margin-top: 8px; color: {margen_color};">{margen_str}</div>
+            <div style="margin-top: 15px; font-size: 1.15rem; color: #e2e8f0; border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 12px;">
+                <span style="font-weight: 600; color: #ffffff;">Tarifa logística:</span> {info_subtarifa} <br><br>
+                <span style="color: #e2e8f0;">Ingreso: <strong style="color: #4ade80;">${p_venta_tot:,.2f} MXN</strong></span><br>
+                <span style="color: #e2e8f0;">C. Producción: <strong style="color: #fca5a5;">-${c_prod_mxn:,.2f} MXN</strong></span>
             </div>
         </div>
         """
@@ -255,7 +419,7 @@ with tab_calc:
     with col_plat3:
         st.markdown(create_platform_card("PaqueteExpress", "🚚", costo_px_total, f"Zona: {zona_px}", precio_venta_total, costo_produccion_total_mxn), unsafe_allow_html=True)
 
-    st.markdown("<br><center><small style='color: #8b949e;'>Las tarifas logísticas son aproximadas. Costos de producción basados en configuración interna PIZARRON.</small></center>", unsafe_allow_html=True)
+    st.markdown("<br><center><p style='color: #e2e8f0 !important; font-size: 1.1rem !important; opacity: 0.85;'>Las tarifas logísticas son aproximadas. Costos de producción basados en configuración interna PIZARRON.</p></center>", unsafe_allow_html=True)
 
     # --- Generación de Reporte PDF ---
     st.markdown("---")
