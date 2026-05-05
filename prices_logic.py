@@ -83,8 +83,7 @@ def save_production_costs(data):
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
         return True
-    except Exception as e:
-        print(f"Error guardando costos: {e}")
+    except Exception:
         return False
 
 def get_production_costs_detailed(volumen_lts, categoria, materia_prima_cost_usd=None):
@@ -114,7 +113,7 @@ def get_production_costs_detailed(volumen_lts, categoria, materia_prima_cost_usd
     # Agregar materia prima si existe
     variables_final = cat_costs.copy()
     if materia_prima_cost_usd is not None and materia_prima_cost_usd > 0:
-        variables_final["Materia Prima Específica"] = materia_prima_cost_usd
+        variables_final["Materia Prima (Líquido)"] = materia_prima_cost_usd
         costo_variable += materia_prima_cost_usd
     
     total_costo = costo_fijo + costo_variable
@@ -163,8 +162,7 @@ def load_excel_data(filepath='Tabla de especificaciones de envases en Excel.xlsx
         df['Peso_Envase_Kg'] = df['Peso'].apply(clean_weight)
         df['Etiqueta_UI'] = df['Modelo'] + ' (' + df['Capacidad del envases'].astype(str) + ')'
         return df
-    except Exception as e:
-        print(f"Error cargando excel: {e}")
+    except Exception:
         return pd.DataFrame()
 
 def load_barcode_data(filepath=BARCODE_FILE):
@@ -175,8 +173,7 @@ def load_barcode_data(filepath=BARCODE_FILE):
         # Crear una etiqueta legible para el buscador
         df['Search_Label'] = df['Producto'].astype(str) + ' - ' + df['Producto II'].astype(str).fillna('')
         return df
-    except Exception as e:
-        print(f"Error cargando excel de códigos: {e}")
+    except Exception:
         return pd.DataFrame()
 
 def load_product_materia_prima():
@@ -195,8 +192,7 @@ def save_product_materia_prima(product_id, cost_usd):
         with open(PRODUCT_COSTS_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
         return True
-    except Exception as e:
-        print(f"Error guardando costo de producto: {e}")
+    except Exception:
         return False
 
 def get_current_exchange_rate():
@@ -208,8 +204,8 @@ def get_current_exchange_rate():
         if response.status_code == 200:
             data = response.json()
             return float(data['rates']['MXN'])
-    except Exception as e:
-        print(f"Error fetching exchange rate: {e}")
+    except Exception:
+        return 17.52 # Fallback si falla la API
 def get_packaging_price(capacidad_l):
     """
     Retorna el precio del envase en MXN basado en su capacidad (datos de COT0000514 y usuario).

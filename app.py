@@ -264,6 +264,8 @@ df_envases = get_data()
 df_barcodes = get_barcode_data()
 product_costs = load_product_materia_prima()
 live_rate = get_live_rate()
+if live_rate is None:
+    live_rate = 17.52
 
 # --- Interfaz Principal ---
 tab_calc, tab_config = st.tabs(["🚀 Calculadora de Rentabilidad", "⚙️ Editor de PIZARRON (Costos)"])
@@ -424,7 +426,7 @@ with tab_calc:
 
     # --- Mostrar Métricas ---
     st.markdown("### 🏭 Impacto de Producción")
-    col_prod1, col_prod2, col_prod3 = st.columns(3)
+    col_prod1, col_prod2, col_prod3, col_prod4 = st.columns(4)
 
     def card_html(title, value, unit="", subtext=""):
         return f"""
@@ -438,8 +440,11 @@ with tab_calc:
     with col_prod1:
         st.markdown(card_html("Volumen Total", litros_totales, "Lts"), unsafe_allow_html=True)
     with col_prod2:
-        st.markdown(card_html("Costo Prod. + Envase", (costo_produccion_total_mxn / piezas) if piezas > 0 else 0, "MXN/Pza", f"Envase: ${costo_envase_unit_mxn:.2f} MXN"), unsafe_allow_html=True)
+        costo_litro_final = costo_produccion_total_mxn / litros_totales if litros_totales > 0 else 0
+        st.markdown(card_html("Costo Total / Litro", costo_litro_final, "MXN/Lt", "Líquido + Envase"), unsafe_allow_html=True)
     with col_prod3:
+        st.markdown(card_html("Costo Prod. + Envase", (costo_produccion_total_mxn / piezas) if piezas > 0 else 0, "MXN/Pza", f"Envase: ${costo_envase_unit_mxn:.2f} MXN"), unsafe_allow_html=True)
+    with col_prod4:
         st.markdown(card_html("Costo Total Producción", costo_produccion_total_mxn, "MXN", f"Paridad: ${paridad_usd} / USD"), unsafe_allow_html=True)
 
     with st.expander("📊 Ver Desglose de Costos de PIZARRON que componen el total:", expanded=False):
@@ -447,14 +452,17 @@ with tab_calc:
             rows = []
             
             # Prorrateables
+            total_mxn_lt = 0.0
             for name, usd_cost in desglose_dict["Prorrateables"].items():
                 c_usd = float(usd_cost)
                 c_mxn = c_usd * paridad_usd
+                total_mxn_lt += c_mxn
                 pct = (c_usd / costo_produccion_usd_litro) * 100
                 rows.append({
                     "Tipo": "Fijo (Prorrateable)", 
                     "Concepto": name, 
-                    "Costo Unitario (USD/Lt)": f"${c_usd:.3f} (~${c_mxn:.3f} MXN)", 
+                    "Costo USD/Lt": f"${c_usd:.3f}", 
+                    "Costo MXN/Lt": f"${c_mxn:.3f}", 
                     "Costo Total Pedido (MXN)": f"${c_mxn * litros_totales:,.2f}", 
                     "% del Gasto Total": f"{pct:.1f}%"
                 })
@@ -463,26 +471,43 @@ with tab_calc:
             for name, usd_cost in desglose_dict["Variables"].items():
                 c_usd = float(usd_cost)
                 c_mxn = c_usd * paridad_usd
+                total_mxn_lt += c_mxn
                 pct = (c_usd / costo_produccion_usd_litro) * 100
                 rows.append({
                     "Tipo": f"Variable ({categoria_prod})", 
                     "Concepto": name, 
-                    "Costo Unitario (USD/Lt)": f"${c_usd:.3f} (~${c_mxn:.3f} MXN)", 
+                    "Costo USD/Lt": f"${c_usd:.3f}", 
+                    "Costo MXN/Lt": f"${c_mxn:.3f}", 
                     "Costo Total Pedido (MXN)": f"${c_mxn * litros_totales:,.2f}", 
                     "% del Gasto Total": f"{pct:.1f}%"
                 })
 
             # Añadir Envase al desglose visual
             if costo_envase_unit_mxn > 0:
+                costo_envase_por_litro = costo_envase_unit_mxn / capacidad_l if capacidad_l > 0 else 0
+                total_mxn_lt += costo_envase_por_litro
                 rows.append({
                     "Tipo": "Empaque",
                     "Concepto": "Envase / Botella",
-                    "Costo Unitario (MXN/Pza)": f"${costo_envase_unit_mxn:.2f} MXN",
+                    "Costo USD/Lt": "N/A",
+                    "Costo MXN/Lt": f"${costo_envase_por_litro:.3f}",
                     "Costo Total Pedido (MXN)": f"${costo_envase_total_mxn:,.2f}",
-                    "% del Gasto Total": "N/A (Costo Fijo)"
+                    "% del Gasto Total": "N/A"
                 })
+            
+            # Fila de TOTAL
+            rows.append({
+                "Tipo": "🔥 TOTAL",
+                "Concepto": "COSTO FINAL (LÍQUIDO + ENVASE)",
+                "Costo USD/Lt": "---",
+                "Costo MXN/Lt": f"**${total_mxn_lt:.3f}**",
+                "Costo Total Pedido (MXN)": f"**${costo_produccion_total_mxn:,.2f}**",
+                "% del Gasto Total": "100%"
+            })
                 
             df_bd = pd.DataFrame(rows)
+            st.write("---")
+            st.markdown(f"#### 💰 Resumen: El costo real de este producto es de **${total_mxn_lt:.3f} MXN por litro**.")
             st.dataframe(df_bd, use_container_width=True, hide_index=True)
         else:
             st.info("No hay desglose de costos asignado.")
