@@ -2,8 +2,11 @@ import pandas as pd
 import re
 import json
 import os
+import requests
 
 CONFIG_FILE = 'costos_config.json'
+PRODUCT_COSTS_FILE = 'product_costs.json'
+BARCODE_FILE = 'codigo de barras.xlsx'
 
 DEFAULT_PRODUCTION_COSTS = {
     "prorrateables": {
@@ -84,10 +87,11 @@ def save_production_costs(data):
         print(f"Error guardando costos: {e}")
         return False
 
-def get_production_costs_detailed(volumen_lts, categoria):
+def get_production_costs_detailed(volumen_lts, categoria, materia_prima_cost_usd=None):
     """
     Retorna el costo de producción total por litro (en USD) 
     y el desglose detallado de qué prorrateables y variables aplican.
+    Si materia_prima_cost_usd es proporcionado, se suma al total.
     """
     data = load_production_costs()
     
@@ -106,11 +110,18 @@ def get_production_costs_detailed(volumen_lts, categoria):
         cat_costs = data["rangos_volumen"][-1].get("categorias", {}).get(categoria, {})
         
     costo_variable = sum(cat_costs.values())
+    
+    # Agregar materia prima si existe
+    variables_final = cat_costs.copy()
+    if materia_prima_cost_usd is not None and materia_prima_cost_usd > 0:
+        variables_final["Materia Prima Específica"] = materia_prima_cost_usd
+        costo_variable += materia_prima_cost_usd
+    
     total_costo = costo_fijo + costo_variable
     
     desglose = {
         "Prorrateables": prorrateables,
-        "Variables": cat_costs,
+        "Variables": variables_final,
         "Total_USD": total_costo
     }
     
@@ -155,6 +166,80 @@ def load_excel_data(filepath='Tabla de especificaciones de envases en Excel.xlsx
     except Exception as e:
         print(f"Error cargando excel: {e}")
         return pd.DataFrame()
+
+def load_barcode_data(filepath=BARCODE_FILE):
+    try:
+        if not os.path.exists(filepath):
+            return pd.DataFrame()
+        df = pd.read_excel(filepath)
+        # Crear una etiqueta legible para el buscador
+        df['Search_Label'] = df['Producto'].astype(str) + ' - ' + df['Producto II'].astype(str).fillna('')
+        return df
+    except Exception as e:
+        print(f"Error cargando excel de códigos: {e}")
+        return pd.DataFrame()
+
+def load_product_materia_prima():
+    if not os.path.exists(PRODUCT_COSTS_FILE):
+        return {}
+    try:
+        with open(PRODUCT_COSTS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def save_product_materia_prima(product_id, cost_usd):
+    data = load_product_materia_prima()
+    data[str(product_id)] = float(cost_usd)
+    try:
+        with open(PRODUCT_COSTS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4)
+        return True
+    except Exception as e:
+        print(f"Error guardando costo de producto: {e}")
+        return False
+
+def get_current_exchange_rate():
+    """
+    Obtiene el tipo de cambio USD a MXN desde una API pública (Frankfurter).
+    """
+    try:
+        response = requests.get("https://api.frankfurter.app/latest?from=USD&to=MXN", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return float(data['rates']['MXN'])
+    except Exception as e:
+        print(f"Error fetching exchange rate: {e}")
+def get_packaging_price(capacidad_l):
+    """
+    Retorna el precio del envase en MXN basado en su capacidad (datos de COT0000514 y usuario).
+    Ajustado para coincidir con las capacidades reales de la tabla de envases.
+    """
+    cap = float(capacidad_l)
+    
+    # 500ml (en la tabla aparece como 0.48)
+    if 0.45 <= cap <= 0.55:
+        return 2.0
+    # 960ml / 1Lt (en la tabla aparece como 0.96)
+    elif 0.9 <= cap <= 1.1:
+        return 3.0
+    # 4 Lts (en la tabla aparece como 3.8)
+    elif 3.5 <= cap <= 4.5:
+        return 20.46
+    # 5 Lts
+    elif cap == 5.0:
+        return 22.0 # Estimado o podrías pedir confirmación
+    # 10 Lts
+    elif cap == 10.0:
+        return 39.66
+    # 20 Lts
+    elif cap == 20.0:
+        return 72.19
+    # 25 Lts
+    elif cap == 25.0:
+        return 94.66
+    # Para otros tamaños (30, 50, 60), default 0 o lógica adicional
+    return 0.0
 
 # Tarifas extraídas del PDF
 TARIFFS = {

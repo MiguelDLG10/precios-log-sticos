@@ -1,0 +1,9 @@
+__pycache__/
+.DS_Store
+venv/
+scratch/
+.env
+*.pyc
+*.txt
+hoja2.csv
+hoja2.md

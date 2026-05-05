@@ -1,6 +1,11 @@
 import streamlit as st
 import pandas as pd
-from prices_logic import load_excel_data, get_cost, determine_subtariff, TARIFFS, load_production_costs, save_production_costs, get_production_costs, get_production_costs_detailed
+from prices_logic import (
+    load_excel_data, get_cost, determine_subtariff, TARIFFS, 
+    load_production_costs, save_production_costs, get_production_costs, 
+    get_production_costs_detailed, load_barcode_data, load_product_materia_prima, 
+    save_product_materia_prima, get_current_exchange_rate, get_packaging_price
+)
 from report_generator import generate_pdf
 
 # --- Configuración de Página ---
@@ -27,7 +32,7 @@ def local_css():
     /* Mejorar legibilidad global de Streamlit */
     .stApp p, .stApp li, .stApp span, .stApp label, .stApp div {
         color: #f1f5f9 !important;
-        font-size: 1.15rem !important;
+        font-size: 1.1rem !important;
     }
 
     /* Headers principales */
@@ -61,7 +66,7 @@ def local_css():
     section[data-testid="stSidebar"] label,
     section[data-testid="stSidebar"] .stMarkdown span {
         color: #f1f5f9 !important;
-        font-size: 1.2rem !important;
+        font-size: 1.05rem !important;
     }
 
     section[data-testid="stSidebar"] h1,
@@ -75,7 +80,7 @@ def local_css():
     section[data-testid="stSidebar"] .stNumberInput label {
         color: #67e8f9 !important;
         font-weight: 600 !important;
-        font-size: 1.2rem !important;
+        font-size: 1.1rem !important;
     }
 
     /* Ocultar elementos por defecto de Streamlit */
@@ -231,9 +236,10 @@ def local_css():
 
     /* Mejorar select boxes y number inputs */
     .stSelectbox > div > div,
-    .stNumberInput > div > div > input {
+    .stNumberInput > div > div > input,
+    .stTextInput > div > div > input {
         color: #ffffff !important;
-        font-size: 1.2rem !important;
+        font-size: 1.05rem !important;
     }
     
     </style>
@@ -246,7 +252,18 @@ local_css()
 def get_data():
     return load_excel_data()
 
+@st.cache_data
+def get_barcode_data():
+    return load_barcode_data()
+
+@st.cache_data(ttl=3600) # Actualizar cada hora para reflejar cambios diarios sin saturar
+def get_live_rate():
+    return get_current_exchange_rate()
+
 df_envases = get_data()
+df_barcodes = get_barcode_data()
+product_costs = load_product_materia_prima()
+live_rate = get_live_rate()
 
 # --- Interfaz Principal ---
 tab_calc, tab_config = st.tabs(["🚀 Calculadora de Rentabilidad", "⚙️ Editor de PIZARRON (Costos)"])
@@ -265,19 +282,122 @@ with tab_calc:
 
     # --- Sección de Inputs (Sidebar) ---
     with st.sidebar:
+        st.header("🌍 Factores Globales")
+        paridad_usd = st.number_input("Paridad USD/MXN ($):", min_value=1.0, value=live_rate, step=0.1)
+        
+        st.markdown("---")
+        st.header("🔍 Buscador de Productos")
+        st.markdown("Busca por clave única de producto.")
+        
+        # Obtener productos únicos por Clave/Nombre
+        # Combinamos Producto y Producto II para la búsqueda única
+        df_barcodes['Product_Unique_Key'] = df_barcodes['Producto'].astype(str) + " | " + df_barcodes['Producto II'].astype(str).fillna('')
+        unique_products = sorted(df_barcodes['Product_Unique_Key'].unique().tolist())
+        
+        selected_prod_unique = st.selectbox(
+            "1. Seleccionar Producto (Clave):", 
+            ["-- Seleccionar --"] + unique_products,
+            key="product_selector"
+        )
+        
+        selected_product_data = None
+        materia_prima_default_mxn = 0.0
+        available_envases_indices = []
+        
+        if selected_prod_unique != "-- Seleccionar --":
+            # Obtener todas las presentaciones de este producto
+            df_presentaciones = df_barcodes[df_barcodes['Product_Unique_Key'] == selected_prod_unique].copy()
+            
+            # El costo se guarda internamente en USD, lo mostramos en MXN
+            prod_id_first = str(df_presentaciones['Producto'].iloc[0])
+            materia_prima_usd_saved = product_costs.get(prod_id_first, 0.0)
+            materia_prima_default_mxn = materia_prima_usd_saved * paridad_usd
+            st.caption(f"✅ Clave: {prod_id_first}")
+
+            # INTELIGENCIA: Mapear presentaciones a la tabla de envases
+            for _, row in df_presentaciones.iterrows():
+                e_name = str(row['Envase']).lower()
+                e_cap = str(int(row['Multiplicador']))
+                
+                # Buscar coincidencias en df_envases
+                for i, label in enumerate(df_envases['Etiqueta_UI']):
+                    if e_name in label.lower() and e_cap in label:
+                        if i not in available_envases_indices:
+                            available_envases_indices.append(i)
+            
+            # Si encontramos presentaciones, usamos la primera como base para auto-fill de otros campos
+            selected_product_data = df_presentaciones.iloc[0]
+
+        st.markdown("---")
         st.header("⚙️ Parámetros del Producto")
         st.markdown("Ingresa los detalles para calcular los tabuladores.")
         
-        envase_seleccionado = st.selectbox("1. Selecciona el Envase:", df_envases['Etiqueta_UI'].tolist())
+        # Filtro inteligente de envases basado en el producto
+        all_envases_labels = df_envases['Etiqueta_UI'].tolist()
+        if available_envases_indices:
+            envase_options = [all_envases_labels[i] for i in available_envases_indices]
+        else:
+            envase_options = all_envases_labels
+
+        envase_seleccionado = st.selectbox(
+            "1. Selecciona el Envase:", 
+            envase_options,
+            key="envase_selector"
+        )
+        
+        # Lógica de auto-fill para Densidad
+        def_densidad_idx = 0
         densidades_opciones = [1.0, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08]
-        densidad = st.selectbox("2. Densidad del Producto (Kg/L):", densidades_opciones)
+        if selected_product_data is not None:
+            prod_densidad = float(selected_product_data['Densidad'])
+            # Encontrar la opción más cercana
+            if prod_densidad in densidades_opciones:
+                def_densidad_idx = densidades_opciones.index(prod_densidad)
+            else:
+                # Si no está, la agregamos temporalmente o usamos la más cercana
+                densidades_opciones.append(prod_densidad)
+                densidades_opciones.sort()
+                def_densidad_idx = densidades_opciones.index(prod_densidad)
+
+        densidad = st.selectbox("2. Densidad del Producto (Kg/L):", densidades_opciones, index=def_densidad_idx)
         piezas = st.number_input("3. Número de Piezas:", min_value=1, value=1, step=1)
         precio_unitario = st.number_input("4. Precio Venta C/U ($):", min_value=1.0, value=350.0, step=10.0)
         
         st.markdown("---")
+        st.subheader("🧪 Materia Prima")
+        materia_prima_mxn = st.number_input(
+            "Costo Materia Prima (MXN / Litro):", 
+            min_value=0.0, 
+            value=float(materia_prima_default_mxn), 
+            step=0.5,
+            help="Costo del líquido en PESOS por cada litro. Se convertirá a USD para los cálculos internos."
+        )
+        
+        # Convertir a USD para la lógica
+        materia_prima_input_usd = materia_prima_mxn / paridad_usd if paridad_usd > 0 else 0
+        
+        if selected_product_data is not None:
+            st.markdown(f"**Costo en USD:** `${materia_prima_input_usd:.3f}`")
+            if st.button("💾 GUARDAR COSTO EN CATÁLOGO", type="primary"):
+                if save_product_materia_prima(selected_product_data['Producto'], materia_prima_input_usd):
+                    st.success("¡Costo Guardado!")
+                    # Actualizar caché local
+                    product_costs[str(selected_product_data['Producto'])] = materia_prima_input_usd
+                else:
+                    st.error("Error al guardar.")
+
+        st.markdown("---")
         st.subheader("🌍 Factores de Producción")
-        categoria_prod = st.selectbox("5. Categoría:", ["STANDART", "GENERICO", "PREMIUM"])
-        paridad_usd = st.number_input("6. Paridad USD/MXN ($):", min_value=1.0, value=18.50, step=0.1)
+        
+        # Lógica de auto-fill para Categoría
+        def_cat_idx = 0
+        cats_list = ["STANDART", "GENERICO", "PREMIUM"]
+        if selected_product_data is not None:
+            prod_cat = str(selected_product_data['Clasificación']).upper().replace('STANDART', 'STANDART').replace('GENÉRICO', 'GENERICO')
+            if prod_cat in cats_list:
+                def_cat_idx = cats_list.index(prod_cat)
+
+        categoria_prod = st.selectbox("5. Categoría:", cats_list, index=def_cat_idx)
 
         zonas_paquetexpress = list(TARIFFS["Paquetexpress"].keys())
         zona_px = st.selectbox("7. Zona de Envío (PaqueteExpress):", zonas_paquetexpress)
@@ -286,15 +406,20 @@ with tab_calc:
     fila_seleccionada = df_envases[df_envases['Etiqueta_UI'] == envase_seleccionado].iloc[0]
     capacidad_l = fila_seleccionada['Capacidad_L']
     peso_envase_kg = fila_seleccionada['Peso_Envase_Kg']
+    
+    # Costo de Envase (Nuevo basado en PDF Proveedor)
+    costo_envase_unit_mxn = get_packaging_price(capacidad_l)
+    costo_envase_total_mxn = costo_envase_unit_mxn * piezas
 
     peso_neto_unidad = capacidad_l * densidad
     peso_bruto_unidad = peso_neto_unidad + peso_envase_kg
     peso_bruto_total = peso_bruto_unidad * piezas
     
     litros_totales = capacidad_l * piezas
-    costo_produccion_usd_litro, desglose_dict = get_production_costs_detailed(litros_totales, categoria_prod)
+    costo_produccion_usd_litro, desglose_dict = get_production_costs_detailed(litros_totales, categoria_prod, materia_prima_input_usd)
     costo_produccion_total_usd = costo_produccion_usd_litro * litros_totales
-    costo_produccion_total_mxn = costo_produccion_total_usd * paridad_usd
+    # Costo total es: (Líquido en MXN) + (Envases en MXN)
+    costo_produccion_total_mxn = (costo_produccion_total_usd * paridad_usd) + costo_envase_total_mxn
     precio_venta_total = precio_unitario * piezas
 
     # --- Mostrar Métricas ---
@@ -313,7 +438,7 @@ with tab_calc:
     with col_prod1:
         st.markdown(card_html("Volumen Total", litros_totales, "Lts"), unsafe_allow_html=True)
     with col_prod2:
-        st.markdown(card_html("Costo Producción Unit.", costo_produccion_usd_litro, "USD/Lt", f"~ ${(costo_produccion_usd_litro * paridad_usd):.2f} MXN"), unsafe_allow_html=True)
+        st.markdown(card_html("Costo Prod. + Envase", (costo_produccion_total_mxn / piezas) if piezas > 0 else 0, "MXN/Pza", f"Envase: ${costo_envase_unit_mxn:.2f} MXN"), unsafe_allow_html=True)
     with col_prod3:
         st.markdown(card_html("Costo Total Producción", costo_produccion_total_mxn, "MXN", f"Paridad: ${paridad_usd} / USD"), unsafe_allow_html=True)
 
@@ -346,6 +471,16 @@ with tab_calc:
                     "Costo Total Pedido (MXN)": f"${c_mxn * litros_totales:,.2f}", 
                     "% del Gasto Total": f"{pct:.1f}%"
                 })
+
+            # Añadir Envase al desglose visual
+            if costo_envase_unit_mxn > 0:
+                rows.append({
+                    "Tipo": "Empaque",
+                    "Concepto": "Envase / Botella",
+                    "Costo Unitario (MXN/Pza)": f"${costo_envase_unit_mxn:.2f} MXN",
+                    "Costo Total Pedido (MXN)": f"${costo_envase_total_mxn:,.2f}",
+                    "% del Gasto Total": "N/A (Costo Fijo)"
+                })
                 
             df_bd = pd.DataFrame(rows)
             st.dataframe(df_bd, use_container_width=True, hide_index=True)
@@ -374,38 +509,30 @@ with tab_calc:
     costo_px_total = get_cost(peso_bruto_total, "Paquetexpress", zona_px)
 
     def create_platform_card(platform_name, icon, total_cost, info_subtarifa, p_venta_tot, c_prod_mxn):
-        margen_str = "---"
-        margen_color = "#e2e8f0"
+        # Manejo de costos inválidos para el cálculo
+        safe_logistics_cost = total_cost if (total_cost and total_cost > 0) else 0
+        if total_cost == 0.0: safe_logistics_cost = 0.0
         
-        if total_cost is None:
-            cost_str = "No aplica"
-        elif total_cost == -1:
-            cost_str = "Peso Excedido"
-        elif total_cost == 0.0:
-            cost_str = "Envío Gratis / A revisar"
-            margen = p_venta_tot - c_prod_mxn
-            margen_str = f"$ {margen:,.2f}"
-            margen_color = "#4ade80" if margen > 0 else "#f85149"
+        # Recalcular margen con seguridad
+        if total_cost is None or total_cost == -1:
+            margen_str = "N/A"
+            margen_color = "#94a3b8"
         else:
-            cost_str = f"$ {total_cost:,.2f}"
-            margen = p_venta_tot - (total_cost + c_prod_mxn)
+            margen = p_venta_tot - (safe_logistics_cost + c_prod_mxn)
             margen_str = f"$ {margen:,.2f}"
             margen_color = "#4ade80" if margen > 0 else "#f85149"
 
-        html = f"""
-        <div class="glass-card">
-            <div class="card-title"><span class="platform-icon">{icon}</span>{platform_name}</div>
-            <div class="metric-label">Costo Logístico Estimado</div>
-            <div class="highlight-value" style="font-size: 2.2rem;">{cost_str}</div>
-            <div class="metric-label">Utilidad Bruta (Venta vs Gastos)</div>
-            <div style="font-size: 2.2rem; font-weight: 800; margin-top: 8px; color: {margen_color};">{margen_str}</div>
-            <div style="margin-top: 15px; font-size: 1.15rem; color: #e2e8f0; border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 12px;">
-                <span style="font-weight: 600; color: #ffffff;">Tarifa logística:</span> {info_subtarifa} <br><br>
-                <span style="color: #e2e8f0;">Ingreso: <strong style="color: #4ade80;">${p_venta_tot:,.2f} MXN</strong></span><br>
-                <span style="color: #e2e8f0;">C. Producción: <strong style="color: #fca5a5;">-${c_prod_mxn:,.2f} MXN</strong></span>
-            </div>
-        </div>
-        """
+        html = f"""<div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border-radius: 20px; padding: 25px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 20px;">
+<div style="color: #ffffff; font-weight: 700; font-size: 1.5rem; margin-bottom: 15px;"><span>{icon}</span> {platform_name}</div>
+<div style="font-size: 0.9rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.05em;">Utilidad Neta Final</div>
+<div style="font-size: 2.4rem; font-weight: 800; color: {margen_color}; margin: 10px 0;">{margen_str}</div>
+<div style="margin-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 12px;">
+<div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 1.1rem; color: #e2e8f0;"><span>Ingreso (+)</span><span style="color: #4ade80; font-weight: 600;">$ {p_venta_tot:,.2f}</span></div>
+<div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 1.1rem; color: #e2e8f0;"><span>Producción (-)</span><span style="color: #fca5a5; font-weight: 600;">$ {c_prod_mxn:,.2f}</span></div>
+<div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1.1rem; color: #e2e8f0;"><span>Logística (-)</span><span style="color: #fca5a5; font-weight: 600;">$ {safe_logistics_cost:,.2f}</span></div>
+<div style="display: flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.3); padding-top: 10px; font-size: 1.2rem;">
+<span style="color: #ffffff; font-weight: 700;">TOTAL NETO</span><span style="color: {margen_color}; font-weight: 800;">{margen_str}</span></div></div>
+<div style="font-size: 0.85rem; color: #94a3b8; margin-top: 12px; font-style: italic;">{info_subtarifa}</div></div>"""
         return html
 
     col_plat1, col_plat2, col_plat3 = st.columns(3)
@@ -476,9 +603,16 @@ with tab_config:
     st.subheader("2. Tabuladores Variables (USD por Litro)")
     st.markdown("Los rangos escalan por cantidad total de litros producidos en el pedido. Los costos se desglosan por Calidad / Tiers.")
     
+    prev_max = 0.0
     for idx, rango in enumerate(current_data["rangos_volumen"]):
-        with st.expander(f"📥 Rango Nivel {idx+1}: Capado hasta {rango['max_litros']} Litros", expanded=(idx==0)):
-            rango["max_litros"] = st.number_input(f"Tope de Litros del Rango", value=float(rango["max_litros"]), key=f"max_l_{idx}")
+        start_l = prev_max
+        end_l = float(rango['max_litros'])
+        label = f"📊 Rango {idx+1}: {start_l:,.1f} a {end_l:,.1f} Litros"
+        if end_l > 100000: label = f"📊 Rango {idx+1}: Mayor a {start_l:,.1f} Litros"
+        
+        with st.expander(label, expanded=(idx==0)):
+            rango["max_litros"] = st.number_input(f"Tope de Litros del Rango {idx+1}", value=end_l, key=f"max_l_{idx}")
+            prev_max = rango["max_litros"]
             cats = list(rango["categorias"].keys())
             tabs_cats = st.tabs(cats)
             for cat_idx, cat in enumerate(cats):
