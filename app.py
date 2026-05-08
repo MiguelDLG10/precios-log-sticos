@@ -390,20 +390,9 @@ with st.sidebar:
                 st.error("Error al guardar.")
 
     st.markdown("---")
-    st.subheader("🌍 Factores de Producción")
-    
-    # Lógica de auto-fill para Categoría
-    def_cat_idx = 0
-    cats_list = ["STANDART", "GENERICO", "PREMIUM"]
-    if selected_product_data is not None:
-        prod_cat = str(selected_product_data['Clasificación']).upper().replace('STANDART', 'STANDART').replace('GENÉRICO', 'GENERICO')
-        if prod_cat in cats_list:
-            def_cat_idx = cats_list.index(prod_cat)
-
-    categoria_prod = st.selectbox("5. Categoría:", cats_list, index=def_cat_idx)
-
     zonas_paquetexpress = list(TARIFFS["Paquetexpress"].keys())
     zona_px = st.selectbox("7. Zona de Envío (PaqueteExpress):", zonas_paquetexpress)
+
 
 # --- Cálculos Base Iniciales ---
 fila_seleccionada = df_envases[df_envases['Etiqueta_UI'] == envase_seleccionado].iloc[0]
@@ -421,6 +410,21 @@ st.markdown("### 🧪 Escenario de Producción")
 col_sim1, col_sim2 = st.columns([1, 1])
 
 with col_sim1:
+    # Lógica de Categoría
+    def_cat_idx = 0
+    cats_list = ["STANDART", "GENERICO", "PREMIUM"]
+    if selected_product_data is not None:
+        prod_cat = str(selected_product_data['Clasificación']).upper().replace('STANDART', 'STANDART').replace('GENÉRICO', 'GENERICO')
+        if prod_cat in cats_list:
+            def_cat_idx = cats_list.index(prod_cat)
+            
+    categoria_prod = st.selectbox(
+        "✨ Simular Categoría (Calidad):", 
+        cats_list, 
+        index=def_cat_idx,
+        help="Cambia la calidad del producto para ver el impacto en los costos variables."
+    )
+
     # Determinar rango automático inicial
     current_data = load_production_costs()
     auto_range_idx = 0
@@ -443,7 +447,7 @@ with col_sim1:
     current_range = current_data["rangos_volumen"][range_idx]
 
 with col_sim2:
-    st.info(f"💡 **Volumen Actual Pedido:** {litros_totales:,.1f} Lts\\n**Tier seleccionado:** {selected_range_label}")
+    st.info(f"💡 **Escenario:** {categoria_prod} | {selected_range_label}\n\n**Volumen Pedido:** {litros_totales:,.1f} Lts")
 
 # --- Cálculos Base (Basados en el rango seleccionado) ---
 costo_produccion_usd_litro, desglose_dict = get_production_costs_detailed(
