@@ -461,12 +461,6 @@ with col_lab:
     df_prorr = pd.DataFrame(list(current_data["prorrateables"].items()), columns=["Concepto", "Costo USD"])
     edited_prorr = st.data_editor(df_prorr, num_rows="dynamic", key="edit_prorr", use_container_width=True, hide_index=True)
     
-    new_prorr_dict = {str(row["Concepto"]).strip(): float(row["Costo USD"]) for _, row in edited_prorr.iterrows() if str(row["Concepto"]).strip() != "" and pd.notna(row["Costo USD"])}
-    if new_prorr_dict != current_data["prorrateables"]:
-        current_data["prorrateables"] = new_prorr_dict
-        save_production_costs(current_data)
-        st.rerun()
-
     # 2. Editor Variables
     st.markdown(f"#### 🔸 Variables ({categoria_prod})")
     
@@ -484,9 +478,14 @@ with col_lab:
     df_vars = pd.DataFrame(list(cat_costs.items()), columns=["Concepto", "Costo USD"])
     edited_vars = st.data_editor(df_vars, num_rows="dynamic", key="edit_vars", use_container_width=True, hide_index=True)
     
-    new_vars_dict = {str(row["Concepto"]).strip(): float(row["Costo USD"]) for _, row in edited_vars.iterrows() if str(row["Concepto"]).strip() != "" and pd.notna(row["Costo USD"])}
-    
-    if new_vars_dict != cat_costs:
+    if st.button("🚀 Aplicar y Guardar Cambios", type="primary", use_container_width=True):
+        # Procesar Prorrateables
+        new_prorr_dict = {str(row["Concepto"]).strip(): float(row["Costo USD"]) for _, row in edited_prorr.iterrows() if str(row["Concepto"]).strip() != "" and pd.notna(row["Costo USD"])}
+        current_data["prorrateables"] = new_prorr_dict
+        
+        # Procesar Variables
+        new_vars_dict = {str(row["Concepto"]).strip(): float(row["Costo USD"]) for _, row in edited_vars.iterrows() if str(row["Concepto"]).strip() != "" and pd.notna(row["Costo USD"])}
+        
         old_keys = set(cat_costs.keys())
         new_keys = set(new_vars_dict.keys())
         added_keys = new_keys - old_keys
@@ -494,6 +493,7 @@ with col_lab:
         
         current_range["categorias"][categoria_prod] = new_vars_dict
         
+        # Sincronizar otros rangos
         for rango in current_data["rangos_volumen"]:
             if rango != current_range:
                 if categoria_prod not in rango["categorias"]:
@@ -503,8 +503,11 @@ with col_lab:
                 for rk in removed_keys:
                     rango["categorias"][categoria_prod].pop(rk, None)
                     
-        save_production_costs(current_data)
-        st.rerun()
+        if save_production_costs(current_data):
+            st.success("¡Cambios aplicados!")
+            st.rerun()
+        else:
+            st.error("Error al guardar.")
 
 with col_desglose:
     st.markdown("### 📊 Desglose de Costos (Actual)")
