@@ -405,23 +405,53 @@ with st.sidebar:
     zonas_paquetexpress = list(TARIFFS["Paquetexpress"].keys())
     zona_px = st.selectbox("7. Zona de Envío (PaqueteExpress):", zonas_paquetexpress)
 
-# --- Cálculos Base ---
+# --- Cálculos Base Iniciales ---
 fila_seleccionada = df_envases[df_envases['Etiqueta_UI'] == envase_seleccionado].iloc[0]
 capacidad_l = fila_seleccionada['Capacidad_L']
 peso_envase_kg = fila_seleccionada['Peso_Envase_Kg']
-
-# Costo de Envase (Nuevo basado en PDF Proveedor)
 costo_envase_unit_mxn = get_packaging_price(capacidad_l)
 costo_envase_total_mxn = costo_envase_unit_mxn * piezas
-
 peso_neto_unidad = capacidad_l * densidad
 peso_bruto_unidad = peso_neto_unidad + peso_envase_kg
 peso_bruto_total = peso_bruto_unidad * piezas
-
 litros_totales = capacidad_l * piezas
-costo_produccion_usd_litro, desglose_dict = get_production_costs_detailed(litros_totales, categoria_prod, materia_prima_input_usd)
+
+# --- LÓGICA DE SIMULACIÓN (LABORATORIO) ---
+st.markdown("### 🧪 Escenario de Producción")
+col_sim1, col_sim2 = st.columns([1, 1])
+
+with col_sim1:
+    # Determinar rango automático inicial
+    current_data = load_production_costs()
+    auto_range_idx = 0
+    rangos_labels = []
+    for i, rango in enumerate(current_data.get("rangos_volumen", [])):
+        prev_max = current_data["rangos_volumen"][i-1]["max_litros"] if i > 0 else 0
+        label = f"{prev_max:,.1f} - {rango['max_litros']:,.1f} L"
+        if rango['max_litros'] > 100000: label = f"Más de {prev_max:,.1f} L"
+        rangos_labels.append(label)
+        if litros_totales <= rango["max_litros"] and auto_range_idx == 0:
+            auto_range_idx = i
+
+    selected_range_label = st.selectbox(
+        "📦 Simular Rango de Volumen (Tier):", 
+        rangos_labels, 
+        index=auto_range_idx,
+        help="Ajusta el rango para ver cómo cambian los costos según la escala de producción."
+    )
+    range_idx = rangos_labels.index(selected_range_label)
+    current_range = current_data["rangos_volumen"][range_idx]
+
+with col_sim2:
+    st.info(f"💡 **Volumen Actual Pedido:** {litros_totales:,.1f} Lts\\n**Tier seleccionado:** {selected_range_label}")
+
+# --- Cálculos Base (Basados en el rango seleccionado) ---
+costo_produccion_usd_litro, desglose_dict = get_production_costs_detailed(
+    current_range["max_litros"] - 0.1, # Forzamos el uso del rango seleccionado
+    categoria_prod, 
+    materia_prima_input_usd
+)
 costo_produccion_total_usd = costo_produccion_usd_litro * litros_totales
-# Costo total es: (Líquido en MXN) + (Envases en MXN)
 costo_produccion_total_mxn = (costo_produccion_total_usd * paridad_usd) + costo_envase_total_mxn
 precio_venta_total = precio_unitario * piezas
 
@@ -430,12 +460,8 @@ st.markdown("### 🏭 Impacto de Producción")
 col_p1, col_p2, col_p3, col_p4, col_p5 = st.columns(5)
 
 def card_html(title, value, unit="", subtext=""):
-    # Si el valor es string, no aplicamos formato de decimales
-    if isinstance(value, (int, float)):
-        val_str = f"{value:.2f}"
-    else:
-        val_str = str(value)
-        
+    if isinstance(value, (int, float)): val_str = f"{value:.2f}"
+    else: val_str = str(value)
     return f"""
     <div class="glass-card">
         <div class="metric-label">{title}</div>
@@ -449,7 +475,6 @@ with col_p1:
 with col_p2:
     st.markdown(card_html("Total Piezas", piezas, "Pzas"), unsafe_allow_html=True)
 with col_p3:
-    # Extraer el nombre corto del envase de la etiqueta
     pres_name = envase_seleccionado.split('(')[0].strip()
     st.markdown(card_html("Presentación", pres_name, "", f"Capacidad: {capacidad_l}L"), unsafe_allow_html=True)
 with col_p4:
@@ -459,14 +484,13 @@ with col_p5:
     costo_pieza_total = costo_produccion_total_mxn / piezas if piezas > 0 else 0
     st.markdown(card_html("Costo / Pieza", costo_pieza_total, "MXN", f"Envase: ${costo_envase_unit_mxn:.2f}"), unsafe_allow_html=True)
 
+
 st.markdown("---")
 col_lab, col_desglose = st.columns([1, 1.5], gap="large")
 
 with col_lab:
     st.markdown("### 🧪 Laboratorio de Costos")
     st.markdown("Edita o añade variables. **Se guardan en vivo.**")
-    
-    current_data = load_production_costs()
     
     # 1. Editor Prorrateables
     st.markdown("#### 🔹 Fijos (Prorrateables / L)")
@@ -475,16 +499,7 @@ with col_lab:
     
     # 2. Editor Variables
     st.markdown(f"#### 🔸 Variables ({categoria_prod})")
-    
-    current_range = None
-    for rango in current_data.get("rangos_volumen", []):
-        if litros_totales <= rango["max_litros"]:
-            current_range = rango
-            break
-    if not current_range and current_data.get("rangos_volumen"):
-        current_range = current_data["rangos_volumen"][-1]
-        
-    st.caption(f"Aplicando para volumen <= {current_range['max_litros']:,.1f}L")
+    st.caption(f"Editando valores para el tier: `{selected_range_label}`")
     
     cat_costs = current_range.get("categorias", {}).get(categoria_prod, {})
     df_vars = pd.DataFrame(list(cat_costs.items()), columns=["Concepto", "Costo USD"]).sort_values("Concepto").reset_index(drop=True)
