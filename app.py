@@ -563,29 +563,25 @@ with col_lab:
         else:
             st.error("Error al guardar.")
 
-    # Opción de restauración
-    with st.expander("🛡️ Seguridad y Copias"):
-        st.caption("Cada vez que guardas cambios en el laboratorio, se crea una copia de seguridad automática.")
+    # --- Gestión de Backups Integrada ---
+    st.markdown("---")
+    st.markdown("#### 🛡️ Seguridad y Copias")
+    st.caption("Se crea una copia automática cada vez que guardas cambios.")
+    
+    backups_list = get_available_backups()
+    if not backups_list:
+        st.info("No hay copias de seguridad aún.")
+    else:
+        backup_options = {f"Copia del {b['date']}": b['filename'] for b in backups_list[:10]}
+        selected_label = st.selectbox("Restaurar versión anterior:", list(backup_options.keys()), label_visibility="collapsed")
+        selected_filename = backup_options[selected_label]
         
-        backups_list = get_available_backups()
-        if not backups_list:
-            st.info("No se han encontrado copias de seguridad aún.")
-        else:
-            # Crear opciones legibles
-            backup_options = {f"Copia del {b['date']}": b['filename'] for b in backups_list[:10]} # Mostrar últimas 10
-            selected_label = st.selectbox("Selecciona una versión para restaurar:", list(backup_options.keys()))
-            selected_filename = backup_options[selected_label]
-            
-            col_res1, col_res2 = st.columns([1, 1])
-            with col_res1:
-                if st.button("⏪ Restaurar Versión Seleccionada", use_container_width=True, type="primary"):
-                    if restore_backup(selected_filename):
-                        st.success(f"¡Versión del {selected_label.split('del ')[1]} restaurada!")
-                        st.rerun()
-                    else:
-                        st.error("Error al restaurar.")
-            with col_res2:
-                st.caption("⚠️ Al restaurar, se sobrescribirá la configuración actual del laboratorio.")
+        if st.button("⏪ Restaurar Versión", use_container_width=True):
+            if restore_backup(selected_filename):
+                st.success(f"¡Restaurada versión {selected_label.split('del ')[1]}!")
+                st.rerun()
+            else:
+                st.error("Error al restaurar.")
 
 with col_desglose:
     st.markdown("### 📊 Desglose de Costos (Actual)")
