@@ -331,6 +331,22 @@ with st.sidebar:
         # Si encontramos presentaciones, usamos la primera como base para auto-fill de otros campos
         selected_product_data = df_presentaciones.iloc[0]
 
+    # Lógica de auto-fill para Densidad (Movido a Buscador)
+    def_densidad_idx = 0
+    densidades_opciones = [1.0, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08]
+    if selected_product_data is not None:
+        prod_densidad = float(selected_product_data['Densidad'])
+        # Encontrar la opción más cercana
+        if prod_densidad in densidades_opciones:
+            def_densidad_idx = densidades_opciones.index(prod_densidad)
+        else:
+            # Si no está, la agregamos temporalmente o usamos la más cercana
+            densidades_opciones.append(prod_densidad)
+            densidades_opciones.sort()
+            def_densidad_idx = densidades_opciones.index(prod_densidad)
+
+    densidad = st.selectbox("2. Densidad del Producto (Kg/L):", densidades_opciones, index=def_densidad_idx)
+
     st.markdown("---")
     st.header("⚙️ Parámetros del Producto")
     st.markdown("Ingresa los detalles para calcular los tabuladores.")
@@ -348,23 +364,8 @@ with st.sidebar:
         key="envase_selector"
     )
     
-    # Lógica de auto-fill para Densidad
-    def_densidad_idx = 0
-    densidades_opciones = [1.0, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08]
-    if selected_product_data is not None:
-        prod_densidad = float(selected_product_data['Densidad'])
-        # Encontrar la opción más cercana
-        if prod_densidad in densidades_opciones:
-            def_densidad_idx = densidades_opciones.index(prod_densidad)
-        else:
-            # Si no está, la agregamos temporalmente o usamos la más cercana
-            densidades_opciones.append(prod_densidad)
-            densidades_opciones.sort()
-            def_densidad_idx = densidades_opciones.index(prod_densidad)
-
-    densidad = st.selectbox("2. Densidad del Producto (Kg/L):", densidades_opciones, index=def_densidad_idx)
-    piezas = st.number_input("3. Número de Piezas:", min_value=1, value=1, step=1)
-    precio_unitario = st.number_input("4. Precio Venta C/U ($):", min_value=1.0, value=350.0, step=10.0)
+    piezas = st.number_input("2. Número de Piezas:", min_value=1, value=1, step=1)
+    precio_unitario = st.number_input("3. Precio Venta C/U ($):", min_value=1.0, value=350.0, step=10.0)
     
     st.markdown("---")
     st.subheader("🧪 Materia Prima")
@@ -501,12 +502,25 @@ with col_lab:
     df_prorr = pd.DataFrame(list(current_data["prorrateables"].items()), columns=["Concepto", "Costo USD"]).sort_values("Concepto").reset_index(drop=True)
     edited_prorr = st.data_editor(df_prorr, num_rows="dynamic", key="edit_prorr", use_container_width=True, hide_index=True)
     
-    # 2. Editor Variables
-    st.markdown(f"#### 🔸 Variables ({categoria_prod})")
+    # 2. Editor Variables Multi-Categoría
+    st.markdown(f"#### 🔸 Variables por Categoría")
     st.caption(f"Editando valores para el tier: `{selected_range_label}`")
     
-    cat_costs = current_range.get("categorias", {}).get(categoria_prod, {})
-    df_vars = pd.DataFrame(list(cat_costs.items()), columns=["Concepto", "Costo USD"]).sort_values("Concepto").reset_index(drop=True)
+    all_cats = ["STANDART", "GENERICO", "PREMIUM"]
+    unique_concepts = set()
+    for cat in all_cats:
+        unique_concepts.update(current_range.get("categorias", {}).get(cat, {}).keys())
+    
+    unique_concepts = sorted(list(unique_concepts))
+    
+    rows = []
+    for concept in unique_concepts:
+        row = {"Concepto": concept}
+        for cat in all_cats:
+            row[cat] = current_range.get("categorias", {}).get(cat, {}).get(concept, 0.0)
+        rows.append(row)
+    
+    df_vars = pd.DataFrame(rows)
     edited_vars = st.data_editor(df_vars, num_rows="dynamic", key="edit_vars", use_container_width=True, hide_index=True)
     
     if st.button("🚀 Aplicar y Guardar Cambios", type="primary", use_container_width=True):
@@ -514,28 +528,46 @@ with col_lab:
         new_prorr_dict = {str(row["Concepto"]).strip(): float(row["Costo USD"]) for _, row in edited_prorr.iterrows() if str(row["Concepto"]).strip() != "" and pd.notna(row["Costo USD"])}
         current_data["prorrateables"] = new_prorr_dict
         
-        # Procesar Variables
-        new_vars_dict = {str(row["Concepto"]).strip(): float(row["Costo USD"]) for _, row in edited_vars.iterrows() if str(row["Concepto"]).strip() != "" and pd.notna(row["Costo USD"])}
+        # Procesar Variables Multi-Categoría
+        old_keys = set(unique_concepts)
+        new_keys = set()
+        new_data_by_cat = {cat: {} for cat in all_cats}
         
-        old_keys = set(cat_costs.keys())
-        new_keys = set(new_vars_dict.keys())
+        for _, row in edited_vars.iterrows():
+            concept = str(row["Concepto"]).strip()
+            if concept == "": continue
+            new_keys.add(concept)
+            for cat in all_cats:
+                val = row.get(cat, 0.0)
+                new_data_by_cat[cat][concept] = float(val) if pd.notna(val) else 0.0
+
         added_keys = new_keys - old_keys
         removed_keys = old_keys - new_keys
         
-        current_range["categorias"][categoria_prod] = new_vars_dict
-        
-        # Sincronizar otros rangos
+        # Aplicar al rango actual para todas las categorías
+        for cat in all_cats:
+            if "categorias" not in current_range: current_range["categorias"] = {}
+            current_range["categorias"][cat] = new_data_by_cat[cat]
+            
+        # Sincronizar todos los otros rangos
         for rango in current_data["rangos_volumen"]:
             if rango != current_range:
-                if categoria_prod not in rango["categorias"]:
-                    rango["categorias"][categoria_prod] = {}
-                for ak in added_keys:
-                    rango["categorias"][categoria_prod][ak] = new_vars_dict[ak]
-                for rk in removed_keys:
-                    rango["categorias"][categoria_prod].pop(rk, None)
+                if "categorias" not in rango: rango["categorias"] = {}
+                for cat in all_cats:
+                    if cat not in rango["categorias"]:
+                        rango["categorias"][cat] = {}
+                    
+                    # Actualizar valores existentes y añadir nuevos
+                    # Para llaves nuevas, usamos el valor ingresado en el editor como base
+                    for ak in added_keys:
+                        rango["categorias"][cat][ak] = new_data_by_cat[cat][ak]
+                    
+                    # Eliminar llaves quitadas
+                    for rk in removed_keys:
+                        rango["categorias"][cat].pop(rk, None)
                     
         if save_production_costs(current_data):
-            st.success("¡Cambios aplicados!")
+            st.success("¡Cambios aplicados globalmente!")
             st.rerun()
         else:
             st.error("Error al guardar.")
