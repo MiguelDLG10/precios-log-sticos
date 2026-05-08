@@ -293,70 +293,36 @@ with st.sidebar:
     st.markdown("Busca por clave única de producto.")
     
     # Obtener productos únicos por Clave/Nombre
-    # Combinamos Producto y Producto II para la búsqueda única
     df_barcodes['Product_Unique_Key'] = df_barcodes['Producto'].astype(str) + " | " + df_barcodes['Producto II'].astype(str).fillna('')
     unique_products = sorted(df_barcodes['Product_Unique_Key'].unique().tolist())
     
-    selected_prod_unique = st.selectbox(
-        "1. Seleccionar Producto (Clave):", 
-        ["-- Seleccionar --"] + unique_products,
-        key="product_selector"
-    )
-    
+    # Lógica de Pre-procesamiento (Necesaria para que Parámetros tenga datos)
+    selected_prod_unique = st.session_state.get("product_selector", "-- Seleccionar --")
     selected_product_data = None
-    materia_prima_default_mxn = 0.0
     available_envases_indices = []
-    
+    materia_prima_default_mxn = 0.0
+
     if selected_prod_unique != "-- Seleccionar --":
-        # Obtener todas las presentaciones de este producto
         df_presentaciones = df_barcodes[df_barcodes['Product_Unique_Key'] == selected_prod_unique].copy()
-        
-        # El costo se guarda internamente en USD, lo mostramos en MXN
         prod_id_first = str(df_presentaciones['Producto'].iloc[0])
         materia_prima_usd_saved = product_costs.get(prod_id_first, 0.0)
         materia_prima_default_mxn = materia_prima_usd_saved * paridad_usd
-        st.caption(f"✅ Clave: {prod_id_first}")
-
-        # INTELIGENCIA: Mapear presentaciones a la tabla de envases
+        
         for _, row in df_presentaciones.iterrows():
             e_name = str(row['Envase']).lower()
             e_cap = str(int(row['Multiplicador']))
-            
-            # Buscar coincidencias en df_envases
             for i, label in enumerate(df_envases['Etiqueta_UI']):
                 if e_name in label.lower() and e_cap in label:
                     if i not in available_envases_indices:
                         available_envases_indices.append(i)
-        
-        # Si encontramos presentaciones, usamos la primera como base para auto-fill de otros campos
         selected_product_data = df_presentaciones.iloc[0]
 
-    # Lógica de auto-fill para Densidad (Movido a Buscador)
-    def_densidad_idx = 0
-    densidades_opciones = [1.0, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08]
-    if selected_product_data is not None:
-        prod_densidad = float(selected_product_data['Densidad'])
-        # Encontrar la opción más cercana
-        if prod_densidad in densidades_opciones:
-            def_densidad_idx = densidades_opciones.index(prod_densidad)
-        else:
-            # Si no está, la agregamos temporalmente o usamos la más cercana
-            densidades_opciones.append(prod_densidad)
-            densidades_opciones.sort()
-            def_densidad_idx = densidades_opciones.index(prod_densidad)
-
-    densidad = st.selectbox("2. Densidad del Producto (Kg/L):", densidades_opciones, index=def_densidad_idx)
-
-    st.markdown("---")
+    # --- ⚙️ SECCIÓN: PARÁMETROS DEL PRODUCTO (Ahora Arriba) ---
     st.header("⚙️ Parámetros del Producto")
-    st.markdown("Ingresa los detalles para calcular los tabuladores.")
+    st.markdown("Detalles de la presentación y venta.")
     
-    # Filtro inteligente de envases basado en el producto
     all_envases_labels = df_envases['Etiqueta_UI'].tolist()
-    if available_envases_indices:
-        envase_options = [all_envases_labels[i] for i in available_envases_indices]
-    else:
-        envase_options = all_envases_labels
+    envase_options = [all_envases_labels[i] for i in available_envases_indices] if available_envases_indices else all_envases_labels
 
     envase_seleccionado = st.selectbox(
         "1. Selecciona el Envase:", 
@@ -366,6 +332,34 @@ with st.sidebar:
     
     piezas = st.number_input("2. Número de Piezas:", min_value=1, value=1, step=1)
     precio_unitario = st.number_input("3. Precio Venta C/U ($):", min_value=1.0, value=350.0, step=10.0)
+
+    st.markdown("---")
+
+    # --- 🔍 SECCIÓN: BUSCADOR DE PRODUCTOS (Ahora Abajo) ---
+    st.header("🔍 Buscador de Productos")
+    
+    selected_prod_unique = st.selectbox(
+        "1. Seleccionar Producto (Clave):", 
+        ["-- Seleccionar --"] + unique_products,
+        key="product_selector"
+    )
+    
+    if selected_prod_unique != "-- Seleccionar --":
+        st.caption(f"✅ Clave: {str(selected_product_data['Producto'])}")
+
+    # Lógica de Densidad
+    def_densidad_idx = 0
+    densidades_opciones = [1.0, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08]
+    if selected_product_data is not None:
+        prod_densidad = float(selected_product_data['Densidad'])
+        if prod_densidad in densidades_opciones:
+            def_densidad_idx = densidades_opciones.index(prod_densidad)
+        else:
+            densidades_opciones.append(prod_densidad)
+            densidades_opciones.sort()
+            def_densidad_idx = densidades_opciones.index(prod_densidad)
+
+    densidad = st.selectbox("2. Densidad del Producto (Kg/L):", densidades_opciones, index=def_densidad_idx)
     
     st.markdown("---")
     st.subheader("🧪 Materia Prima")
