@@ -289,9 +289,6 @@ with st.sidebar:
     paridad_usd = st.number_input("Paridad USD/MXN ($):", min_value=1.0, value=live_rate, step=0.1)
     
     st.markdown("---")
-    st.header("🔍 Buscador de Productos")
-    st.markdown("Busca por clave única de producto.")
-    
     # Obtener productos únicos por Clave/Nombre
     df_barcodes['Product_Unique_Key'] = df_barcodes['Producto'].astype(str) + " | " + df_barcodes['Producto II'].astype(str).fillna('')
     unique_products = sorted(df_barcodes['Product_Unique_Key'].unique().tolist())
