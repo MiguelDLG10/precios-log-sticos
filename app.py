@@ -456,7 +456,8 @@ with col_p4:
     costo_litro_final = costo_produccion_total_mxn / litros_totales if litros_totales > 0 else 0
     st.markdown(card_html("Costo / Litro", costo_litro_final, "MXN", "Líquido + Envase"), unsafe_allow_html=True)
 with col_p5:
-    st.markdown(card_html("Costo / Envase", costo_envase_unit_mxn, "MXN", "Precio unitario"), unsafe_allow_html=True)
+    costo_pieza_total = costo_produccion_total_mxn / piezas if piezas > 0 else 0
+    st.markdown(card_html("Costo / Pieza", costo_pieza_total, "MXN", f"Envase: ${costo_envase_unit_mxn:.2f}"), unsafe_allow_html=True)
 
 st.markdown("---")
 col_lab, col_desglose = st.columns([1, 1.5], gap="large")
