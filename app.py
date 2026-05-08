@@ -426,26 +426,36 @@ precio_venta_total = precio_unitario * piezas
 
 # --- Mostrar Métricas ---
 st.markdown("### 🏭 Impacto de Producción")
-col_prod1, col_prod2, col_prod3, col_prod4 = st.columns(4)
+col_p1, col_p2, col_p3, col_p4, col_p5 = st.columns(5)
 
 def card_html(title, value, unit="", subtext=""):
+    # Si el valor es string, no aplicamos formato de decimales
+    if isinstance(value, (int, float)):
+        val_str = f"{value:.2f}"
+    else:
+        val_str = str(value)
+        
     return f"""
     <div class="glass-card">
         <div class="metric-label">{title}</div>
-        <div class="highlight-value">{value:.2f} {unit}</div>
-        <div style="font-size: 1.15rem; color: #e2e8f0; margin-top: 6px;">{subtext}</div>
+        <div class="highlight-value" style="font-size: 2.1rem !important;">{val_str} {unit}</div>
+        <div style="font-size: 1rem; color: #e2e8f0; margin-top: 6px; opacity: 0.8;">{subtext}</div>
     </div>
     """
 
-with col_prod1:
+with col_p1:
     st.markdown(card_html("Volumen Total", litros_totales, "Lts"), unsafe_allow_html=True)
-with col_prod2:
+with col_p2:
+    st.markdown(card_html("Total Piezas", piezas, "Pzas"), unsafe_allow_html=True)
+with col_p3:
+    # Extraer el nombre corto del envase de la etiqueta
+    pres_name = envase_seleccionado.split('(')[0].strip()
+    st.markdown(card_html("Presentación", pres_name, "", f"Capacidad: {capacidad_l}L"), unsafe_allow_html=True)
+with col_p4:
     costo_litro_final = costo_produccion_total_mxn / litros_totales if litros_totales > 0 else 0
-    st.markdown(card_html("Costo Total / Litro", costo_litro_final, "MXN/Lt", "Líquido + Envase"), unsafe_allow_html=True)
-with col_prod3:
-    st.markdown(card_html("Costo Prod. + Envase", (costo_produccion_total_mxn / piezas) if piezas > 0 else 0, "MXN/Pza", f"Envase: ${costo_envase_unit_mxn:.2f} MXN"), unsafe_allow_html=True)
-with col_prod4:
-    st.markdown(card_html("Costo Total Producción", costo_produccion_total_mxn, "MXN", f"Paridad: ${paridad_usd} / USD"), unsafe_allow_html=True)
+    st.markdown(card_html("Costo / Litro", costo_litro_final, "MXN", "Líquido + Envase"), unsafe_allow_html=True)
+with col_p5:
+    st.markdown(card_html("Costo / Envase", costo_envase_unit_mxn, "MXN", "Precio unitario"), unsafe_allow_html=True)
 
 st.markdown("---")
 col_lab, col_desglose = st.columns([1, 1.5], gap="large")
