@@ -616,8 +616,8 @@ with col_desglose:
             })
         
         rows.append({
-            "Tipo": "🔥 TOTAL",
-            "Concepto": "LÍQUIDO + ENVASE",
+            "Tipo": "TOTAL",
+            "Concepto": "LIQUIDO + ENVASE",
             "USD/Lt": "---",
             "MXN/Lt": f"${total_mxn_lt:.3f}",
             "Total MXN": f"${costo_produccion_total_mxn:,.2f}"

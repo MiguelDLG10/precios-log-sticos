@@ -7,7 +7,7 @@ class LogisticsReport(FPDF):
     def header(self):
         self.set_font("Arial", "B", 18)
         self.set_text_color(30, 27, 75) # Navy blue
-        self.cell(0, 10, "Reporte de Laboratorio de Costos y Producción", border=False, ln=True, align="C")
+        self.cell(0, 10, "Reporte de Laboratorio de Costos y Produccion", border=False, ln=True, align="C")
         self.set_draw_color(99, 102, 241) # Indigo
         self.set_line_width(0.5)
         self.line(10, 22, 200, 22)
@@ -51,7 +51,7 @@ class LogisticsReport(FPDF):
                 self.set_fill_color(245, 245, 250)
                 
             for j, col in enumerate(cols):
-                val = str(row[col])
+                val = str(row[col]).encode('latin-1', 'replace').decode('latin-1')
                 self.cell(widths[j], 7, val, border=1, align='C', fill=True)
             self.ln()
         self.ln(6)
@@ -65,7 +65,7 @@ def generate_pdf(data):
     
     # 2. Tabla: Costos Variables por Categoría
     # df_vars tiene Concepto, STANDART, GENERICO, PREMIUM
-    pdf.draw_dataframe("2. Costos Variables por Categoría (USD / L)", data['df_vars'], col_widths=[70, 40, 40, 40])
+    pdf.draw_dataframe("2. Costos Variables por Categoria (USD / L)", data['df_vars'], col_widths=[70, 40, 40, 40])
     
     # 3. Tabla: Desglose de Costos Actual
     # df_bd tiene Tipo, Concepto, USD/Lt, MXN/Lt, Total MXN
@@ -74,14 +74,14 @@ def generate_pdf(data):
     # 4. Sección: Impacto de Producción (5 Cuadros/Métricas)
     pdf.set_font("Arial", "B", 14)
     pdf.set_text_color(30, 27, 75)
-    pdf.cell(0, 10, "Impacto de Producción", ln=True)
+    pdf.cell(0, 10, "Impacto de Produccion", ln=True)
     pdf.ln(2)
     
     # Dibujar "Cajas" de métricas
     metrics = [
         ("Volumen Total", f"{data['litros_totales']:,.1f} Lts"),
         ("Total Piezas", f"{data['piezas']} Pzas"),
-        ("Presentación", data['envase'].split('(')[0].strip()),
+        ("Presentacion", data['envase'].split('(')[0].strip()),
         ("Costo / Litro", f"${data['costo_litro_final']:,.3f} MXN"),
         ("Costo / Pieza", f"${data['costo_pieza_total']:,.2f} MXN")
     ]
@@ -106,10 +106,11 @@ def generate_pdf(data):
         pdf.cell(box_w, 5, label.upper(), ln=False, align='C')
         
         # Texto del valor
+        safe_val = value.encode('latin-1', 'replace').decode('latin-1')
         pdf.set_xy(x_start + (i * box_w), y_start + 12)
         pdf.set_font("Arial", "B", 10)
         pdf.set_text_color(30, 27, 75)
-        pdf.cell(box_w, 7, value, ln=False, align='C')
+        pdf.cell(box_w, 7, safe_val, ln=False, align='C')
 
     # Output pdf file temporarily and read bytes
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
