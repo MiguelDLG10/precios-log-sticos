@@ -4,7 +4,8 @@ from prices_logic import (
 load_excel_data, get_cost, determine_subtariff, TARIFFS, 
 load_production_costs, save_production_costs, get_production_costs, 
 get_production_costs_detailed, load_barcode_data, load_product_materia_prima, 
-save_product_materia_prima, get_current_exchange_rate, get_packaging_price
+save_product_materia_prima, get_current_exchange_rate, get_packaging_price,
+restore_latest_backup
 )
 from report_generator import generate_pdf
 
@@ -518,6 +519,16 @@ with col_lab:
             st.rerun()
         else:
             st.error("Error al guardar.")
+
+    # Opción de restauración
+    with st.expander("🛡️ Seguridad y Copias"):
+        st.caption("Cada vez que guardas, se crea una copia de seguridad automática.")
+        if st.button("⏪ Restaurar Última Copia (Deshacer)", use_container_width=True):
+            if restore_latest_backup():
+                st.success("¡Backup restaurado con éxito!")
+                st.rerun()
+            else:
+                st.warning("No se encontraron copias de seguridad para restaurar.")
 
 with col_desglose:
     st.markdown("### 📊 Desglose de Costos (Actual)")

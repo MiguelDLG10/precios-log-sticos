@@ -69,6 +69,11 @@ DEFAULT_PRODUCTION_COSTS = {
     ]
 }
 
+import shutil
+from datetime import datetime
+
+BACKUP_DIR = 'backups'
+
 def load_production_costs():
     if not os.path.exists(CONFIG_FILE):
         return DEFAULT_PRODUCTION_COSTS
@@ -80,8 +85,39 @@ def load_production_costs():
 
 def save_production_costs(data):
     try:
+        # Crear directorio de backups si no existe
+        if not os.path.exists(BACKUP_DIR):
+            os.makedirs(BACKUP_DIR)
+            
+        # Crear backup del archivo actual antes de sobrescribir
+        if os.path.exists(CONFIG_FILE):
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_path = os.path.join(BACKUP_DIR, f"{CONFIG_FILE}_{timestamp}.bak")
+            shutil.copy2(CONFIG_FILE, backup_path)
+            
         with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
+        return True
+    except Exception:
+        return False
+
+def restore_latest_backup():
+    """
+    Restaura el backup más reciente disponible.
+    """
+    if not os.path.exists(BACKUP_DIR):
+        return False
+    
+    backups = [f for f in os.listdir(BACKUP_DIR) if f.startswith(CONFIG_FILE) and f.endswith('.bak')]
+    if not backups:
+        return False
+    
+    # Ordenar por fecha (el nombre incluye timestamp YYYYMMDD_HHMMSS)
+    latest_backup = sorted(backups)[-1]
+    backup_full_path = os.path.join(BACKUP_DIR, latest_backup)
+    
+    try:
+        shutil.copy2(backup_full_path, CONFIG_FILE)
         return True
     except Exception:
         return False
