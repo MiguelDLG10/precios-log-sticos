@@ -469,7 +469,7 @@ with col_lab:
     
     # 1. Editor Prorrateables
     st.markdown("#### 🔹 Fijos (Prorrateables / L)")
-    df_prorr = pd.DataFrame(list(current_data["prorrateables"].items()), columns=["Concepto", "Costo USD"])
+    df_prorr = pd.DataFrame(list(current_data["prorrateables"].items()), columns=["Concepto", "Costo USD"]).sort_values("Concepto")
     edited_prorr = st.data_editor(df_prorr, num_rows="dynamic", key="edit_prorr", use_container_width=True, hide_index=True)
     
     # 2. Editor Variables
@@ -486,7 +486,7 @@ with col_lab:
     st.caption(f"Aplicando para volumen <= {current_range['max_litros']:,.1f}L")
     
     cat_costs = current_range.get("categorias", {}).get(categoria_prod, {})
-    df_vars = pd.DataFrame(list(cat_costs.items()), columns=["Concepto", "Costo USD"])
+    df_vars = pd.DataFrame(list(cat_costs.items()), columns=["Concepto", "Costo USD"]).sort_values("Concepto")
     edited_vars = st.data_editor(df_vars, num_rows="dynamic", key="edit_vars", use_container_width=True, hide_index=True)
     
     if st.button("🚀 Aplicar y Guardar Cambios", type="primary", use_container_width=True):
