@@ -705,7 +705,18 @@ report_data = {
     "df_prorr": df_prorr,
     "df_vars": df_vars,
     "df_bd": df_bd,
+    "peso_unitario": peso_bruto_unidad,
+    "peso_total": peso_bruto_total,
+    "precio_unitario": precio_unitario,
+    "precio_venta_total": precio_venta_total,
+    "costo_prod_mxn": costo_produccion_total_mxn,
+    "quotes": [
+        {"name": "Mercado Libre", "cost": costo_ml_total, "detail": tarifa_ml_str, "icon": "🤝"},
+        {"name": "Amazon", "cost": costo_amz_total, "detail": tarifa_amz_str, "icon": "🛒"},
+        {"name": "PaqueteExpress", "cost": costo_px_total, "detail": f"Zona: {zona_px}", "icon": "🚚"},
+    ]
 }
+
 
 
 pdf_bytes = generate_pdf(report_data)

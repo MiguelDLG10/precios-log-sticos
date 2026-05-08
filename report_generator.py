@@ -91,7 +91,7 @@ def generate_pdf(data):
     pdf.cell(0, 10, "Impacto de Produccion", ln=True)
     pdf.ln(2)
     
-    metrics = [
+    impact_metrics = [
         ("Volumen Total", f"{data['litros_totales']:,.1f} Lts"),
         ("Total Piezas", f"{data['piezas']} Pzas"),
         ("Presentacion", data['envase'].split('(')[0].strip()),
@@ -99,26 +99,100 @@ def generate_pdf(data):
         ("Costo / Pieza", f"${data['costo_pieza_total']:,.2f} MXN")
     ]
     
-    # Usar celdas con borde para asegurar que sigan el flujo del PDF correctamente
     box_w = (pdf.w - 20) / 5
-    
-    # Fila de etiquetas (parte superior de la caja)
     pdf.set_font("Arial", "B", 8)
     pdf.set_text_color(100, 116, 139)
     pdf.set_fill_color(248, 250, 252)
     pdf.set_draw_color(99, 102, 241)
     
-    for label, _ in metrics:
+    for label, _ in impact_metrics:
         pdf.cell(box_w, 8, label.upper(), border='TLR', align='C', fill=True)
     pdf.ln()
     
-    # Fila de valores (parte inferior de la caja)
     pdf.set_font("Arial", "B", 10)
     pdf.set_text_color(30, 27, 75)
-    for _, value in metrics:
+    for _, value in impact_metrics:
         safe_val = value.encode('latin-1', 'replace').decode('latin-1')
         pdf.cell(box_w, 12, safe_val, border='BLR', align='C', fill=True)
-    pdf.ln(10)
+    pdf.ln(12)
+
+    # 5. Cálculo de Empaque (Pesos)
+    if pdf.get_y() > 240:
+        pdf.add_page()
+    
+    pdf.set_font("Arial", "B", 14)
+    pdf.set_text_color(30, 27, 75)
+    pdf.cell(0, 10, "Calculo de Empaque", ln=True)
+    pdf.ln(2)
+    
+    packaging_metrics = [
+        ("Peso Bruto Unitario", f"{data['peso_unitario']:,.2f} Kg"),
+        ("Piezas", f"{data['piezas']} Pzas"),
+        ("Peso Total Flete", f"{data['peso_total']:,.2f} Kg")
+    ]
+    
+    p_box_w = (pdf.w - 20) / 3
+    pdf.set_font("Arial", "B", 8)
+    pdf.set_text_color(100, 116, 139)
+    for label, _ in packaging_metrics:
+        pdf.cell(p_box_w, 8, label.upper(), border='TLR', align='C', fill=True)
+    pdf.ln()
+    
+    pdf.set_font("Arial", "B", 10)
+    pdf.set_text_color(30, 27, 75)
+    for _, value in packaging_metrics:
+        pdf.cell(p_box_w, 12, value, border='BLR', align='C', fill=True)
+    pdf.ln(15)
+
+    # 6. Cotización Logística y Utilidad Neta
+    if pdf.get_y() > 200:
+        pdf.add_page()
+        
+    pdf.set_font("Arial", "B", 14)
+    pdf.set_text_color(30, 27, 75)
+    pdf.cell(0, 10, "Cotizacion Logistica y Utilidad Neta", ln=True)
+    pdf.ln(4)
+    
+    for q in data['quotes']:
+        # Card style
+        pdf.set_fill_color(250, 250, 255)
+        pdf.set_draw_color(200, 200, 230)
+        
+        # Determine profit and colors
+        safe_cost = q['cost'] if (q['cost'] is not None and q['cost'] >= 0) else 0
+        if q['cost'] == 0.0: safe_cost = 0.0
+        
+        if q['cost'] is None or q['cost'] == -1:
+            utilidad = 0
+            u_str = "N/A"
+            u_color = (100, 100, 100)
+        else:
+            utilidad = data['precio_venta_total'] - (safe_cost + data['costo_prod_mxn'])
+            u_str = f"$ {utilidad:,.2f} MXN"
+            u_color = (34, 139, 34) if utilidad > 0 else (220, 20, 60)
+            
+        # Draw Card
+        pdf.set_font("Arial", "B", 12)
+        pdf.set_text_color(30, 27, 75)
+        pdf.cell(0, 10, f"Plataforma: {q['name']}", border='TLR', ln=True, fill=True, align='L')
+        
+        pdf.set_font("Arial", "", 10)
+        pdf.set_text_color(100, 100, 100)
+        pdf.cell(0, 6, f"   Detalle: {q['detail']}", border='LR', ln=True, fill=True)
+        
+        # Summary row
+        pdf.set_font("Arial", "B", 11)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(60, 8, "   UTILIDAD NETA:", border='L', fill=True)
+        pdf.set_text_color(*u_color)
+        pdf.cell(0, 8, u_str, border='R', ln=True, fill=True)
+        
+        # Breakdown row
+        pdf.set_font("Arial", "", 9)
+        pdf.set_text_color(80, 80, 80)
+        breakdown_str = f"   (Ingreso: ${data['precio_venta_total']:,.2f} | Produccion: ${data['costo_prod_mxn']:,.2f} | Logistica: ${safe_cost:,.2f})"
+        pdf.cell(0, 8, breakdown_str, border='BLR', ln=True, fill=True)
+        pdf.ln(5)
 
     # Output pdf file temporarily and read bytes
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
