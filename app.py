@@ -575,6 +575,7 @@ with col_lab:
 
 with col_desglose:
     st.markdown("### 📊 Desglose de Costos (Actual)")
+    df_bd = pd.DataFrame() # Initialize to avoid errors in report
     if costo_produccion_usd_litro > 0:
         rows = []
         
@@ -696,24 +697,16 @@ st.markdown("Descarga un informe con desglose logístico (próximamente versión
 
 report_data = {
     "envase": envase_seleccionado,
-    "densidad": densidad,
     "piezas": piezas,
-    "precio_unitario": precio_unitario,
-    "zona_px": zona_px,
-    "peso_unitario": peso_bruto_unidad,
-    "peso_total": peso_bruto_total,
-    "ml_costo_total": costo_ml_total,
-    "ml_costo_pieza": costo_ml_total / piezas if costo_ml_total and costo_ml_total > 0 else None,
-    "ml_tarifa": tarifa_ml_str,
-    "amz_costo_total": costo_amz_total,
-    "amz_costo_pieza": costo_amz_total / piezas if costo_amz_total and costo_amz_total > 0 else None,
-    "amz_tarifa": tarifa_amz_str,
-    "px_costo_total": costo_px_total,
-    "px_costo_pieza": costo_px_total / piezas if costo_px_total and costo_px_total > 0 else None,
-    "px_tarifa": zona_px,
-    "costo_prod_mxn": costo_produccion_total_mxn,
-    "utilidad_ml": precio_venta_total - (costo_ml_total + costo_produccion_total_mxn) if costo_ml_total and costo_ml_total >= 0 else 0,
+    "litros_totales": litros_totales,
+    "costo_litro_final": costo_litro_final,
+    "costo_pieza_total": costo_pieza_total,
+    "capacidad_l": capacidad_l,
+    "df_prorr": df_prorr,
+    "df_vars": df_vars,
+    "df_bd": df_bd,
 }
+
 
 pdf_bytes = generate_pdf(report_data)
 

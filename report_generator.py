@@ -1,15 +1,17 @@
 from fpdf import FPDF
+import pandas as pd
 import tempfile
 import os
 
 class LogisticsReport(FPDF):
     def header(self):
-        self.set_font("Arial", "B", 16)
-        self.set_text_color(13, 17, 23)
-        self.cell(0, 10, "Reporte de Costos Logisticos", border=False, ln=True, align="C")
-        self.set_draw_color(100, 149, 237)
+        self.set_font("Arial", "B", 18)
+        self.set_text_color(30, 27, 75) # Navy blue
+        self.cell(0, 10, "Reporte de Laboratorio de Costos y Producción", border=False, ln=True, align="C")
+        self.set_draw_color(99, 102, 241) # Indigo
+        self.set_line_width(0.5)
         self.line(10, 22, 200, 22)
-        self.ln(10)
+        self.ln(12)
 
     def footer(self):
         self.set_y(-15)
@@ -17,85 +19,99 @@ class LogisticsReport(FPDF):
         self.set_text_color(128)
         self.cell(0, 10, f"Pagina {self.page_no()}", align="C")
 
+    def draw_dataframe(self, title, df, col_widths=None):
+        self.set_font("Arial", "B", 13)
+        self.set_text_color(30, 27, 75)
+        self.cell(0, 10, title, ln=True)
+        self.ln(1)
+        
+        # Header
+        self.set_font("Arial", "B", 10)
+        self.set_fill_color(230, 230, 250) # Light lavender
+        self.set_text_color(0, 0, 0)
+        
+        cols = df.columns
+        if col_widths is None:
+            w = (self.w - 20) / len(cols)
+            widths = [w] * len(cols)
+        else:
+            widths = col_widths
+
+        for i, col in enumerate(cols):
+            self.cell(widths[i], 8, str(col), border=1, align='C', fill=True)
+        self.ln()
+        
+        # Data
+        self.set_font("Arial", size=9)
+        for i, row in df.iterrows():
+            # Alternate row colors
+            if i % 2 == 0:
+                self.set_fill_color(255, 255, 255)
+            else:
+                self.set_fill_color(245, 245, 250)
+                
+            for j, col in enumerate(cols):
+                val = str(row[col])
+                self.cell(widths[j], 7, val, border=1, align='C', fill=True)
+            self.ln()
+        self.ln(6)
+
 def generate_pdf(data):
     pdf = LogisticsReport()
     pdf.add_page()
     
-    # Parámetros Ingresados
-    pdf.set_font("Arial", "B", 14)
-    pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 10, "Parametros Ingresados", ln=True)
+    # 1. Tabla: Costos Fijos (Prorrateables)
+    pdf.draw_dataframe("1. Costos Fijos (Prorrateables / L)", data['df_prorr'], col_widths=[100, 90])
     
-    pdf.set_font("Arial", size=12)
-    pdf.cell(0, 8, f"- Envase Seleccionado: {data['envase']}", ln=True)
-    pdf.cell(0, 8, f"- Densidad del Producto: {data['densidad']} Kg/L", ln=True)
-    pdf.cell(0, 8, f"- Numero de Piezas: {data['piezas']}", ln=True)
-    pdf.cell(0, 8, f"- Precio Unitario de Venta: ${data['precio_unitario']:,.2f}", ln=True)
-    pdf.cell(0, 8, f"- Zona de Envio: {data['zona_px']}", ln=True)
-    pdf.ln(5)
-
-    # Propiedades Físicas
+    # 2. Tabla: Costos Variables por Categoría
+    # df_vars tiene Concepto, STANDART, GENERICO, PREMIUM
+    pdf.draw_dataframe("2. Costos Variables por Categoría (USD / L)", data['df_vars'], col_widths=[70, 40, 40, 40])
+    
+    # 3. Tabla: Desglose de Costos Actual
+    # df_bd tiene Tipo, Concepto, USD/Lt, MXN/Lt, Total MXN
+    pdf.draw_dataframe("3. Desglose de Costos Actual", data['df_bd'], col_widths=[25, 60, 30, 30, 45])
+    
+    # 4. Sección: Impacto de Producción (5 Cuadros/Métricas)
     pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "Pesos Calculados y Volumen", ln=True)
-    pdf.set_font("Arial", size=12)
-    pdf.cell(0, 8, f"- Peso Bruto Unitario: {data['peso_unitario']:,.2f} Kg", ln=True)
-    pdf.cell(0, 8, f"- Peso Bruto Total: {data['peso_total']:,.2f} Kg", ln=True)
-    pdf.ln(5)
-
-    # Costos de Producción
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "Integracion de Produccion", ln=True)
-    pdf.set_font("Arial", size=12)
-    costo_prod = data.get('costo_prod_mxn', 0)
-    pdf.cell(0, 8, f"- Costo Total Interno: ${costo_prod:,.2f} MXN", ln=True)
-    pdf.set_font("Arial", "I", 10)
-    pdf.cell(0, 8, f"  (Basado en Costos Prorrateables + Categorias tabuladas de PIZARRON)", ln=True)
-    pdf.ln(5)
-
-    # Cotizaciones
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "Cotizaciones Incurridas", ln=True)
+    pdf.set_text_color(30, 27, 75)
+    pdf.cell(0, 10, "Impacto de Producción", ln=True)
     pdf.ln(2)
     
-    platforms = [
-        ("Mercado Libre", data['ml_costo_total'], data['ml_costo_pieza'], data['ml_tarifa']),
-        ("Amazon", data['amz_costo_total'], data['amz_costo_pieza'], data['amz_tarifa']),
-        ("PaqueteExpress", data['px_costo_total'], data['px_costo_pieza'], data['px_tarifa']),
+    # Dibujar "Cajas" de métricas
+    metrics = [
+        ("Volumen Total", f"{data['litros_totales']:,.1f} Lts"),
+        ("Total Piezas", f"{data['piezas']} Pzas"),
+        ("Presentación", data['envase'].split('(')[0].strip()),
+        ("Costo / Litro", f"${data['costo_litro_final']:,.3f} MXN"),
+        ("Costo / Pieza", f"${data['costo_pieza_total']:,.2f} MXN")
     ]
     
-    for name, c_tot, c_pz, tarif in platforms:
-        pdf.set_font("Arial", "B", 12)
-        pdf.set_text_color(50, 50, 200)
-        pdf.cell(0, 8, f"Plataforma: {name}", ln=True)
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font("Arial", size=11)
-        pdf.cell(0, 6, f"   Clasificacion: {tarif}", ln=True)
+    # Configuración de cajas: 5 columnas
+    box_w = (pdf.w - 20) / 5
+    box_h = 25
+    
+    x_start = pdf.get_x()
+    y_start = pdf.get_y()
+    
+    for i, (label, value) in enumerate(metrics):
+        # Dibujar borde de la caja
+        pdf.set_draw_color(99, 102, 241)
+        pdf.set_fill_color(248, 250, 252)
+        pdf.rect(x_start + (i * box_w), y_start, box_w, box_h, style='DF')
         
-        if c_tot == -1:
-            pdf.cell(0, 6, "   Costo Total: Peso Excedido (> Maximo Permitido)", ln=True)
-            pdf.cell(0, 6, "   Costo por Pieza: Consulta Tarifas de Carga Especial", ln=True)
-        elif c_tot is None:
-            pdf.cell(0, 6, "   Costo Total: No aplica", ln=True)
-        elif c_tot == 0.0:
-            pdf.cell(0, 6, "   Costo Total: Envio Gratis (A considerar politicas de vendedor)", ln=True)
-        else:
-            pdf.set_font("Arial", "B", 11)
-            pdf.cell(0, 6, f"   Costo Logistico Total: ${c_tot:,.2f}", ln=True)
-            if c_pz is not None:
-                pdf.cell(0, 6, f"   Costo Logistico por Pieza: ${c_pz:,.2f}", ln=True)
-            
-            # Utilidad Neta
-            ingreso_total = data['precio_unitario'] * data['piezas']
-            utilidad = ingreso_total - (c_tot + data.get('costo_prod_mxn', 0))
-            pdf.set_font("Arial", "B", 12)
-            if utilidad > 0:
-                pdf.set_text_color(34, 139, 34) # Verde
-            else:
-                pdf.set_text_color(220, 20, 60) # Rojo
-            pdf.cell(0, 8, f"   UTILIDAD NETA FINAL: ${utilidad:,.2f} MXN", ln=True)
-        pdf.ln(4)
+        # Texto de la etiqueta
+        pdf.set_xy(x_start + (i * box_w), y_start + 5)
+        pdf.set_font("Arial", "B", 8)
+        pdf.set_text_color(100, 116, 139)
+        pdf.cell(box_w, 5, label.upper(), ln=False, align='C')
+        
+        # Texto del valor
+        pdf.set_xy(x_start + (i * box_w), y_start + 12)
+        pdf.set_font("Arial", "B", 10)
+        pdf.set_text_color(30, 27, 75)
+        pdf.cell(box_w, 7, value, ln=False, align='C')
 
-    # Output pdf file temporarily and read bytes to avoid version string return issues with PyFPDF and FPDF2
+    # Output pdf file temporarily and read bytes
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         temp_path = tmp.name
     
