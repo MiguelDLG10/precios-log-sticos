@@ -105,17 +105,55 @@ def restore_latest_backup():
     """
     Restaura el backup más reciente disponible.
     """
-    if not os.path.exists(BACKUP_DIR):
-        return False
-    
-    backups = [f for f in os.listdir(BACKUP_DIR) if f.startswith(CONFIG_FILE) and f.endswith('.bak')]
+    backups = get_available_backups()
     if not backups:
         return False
     
-    # Ordenar por fecha (el nombre incluye timestamp YYYYMMDD_HHMMSS)
-    latest_backup = sorted(backups)[-1]
-    backup_full_path = os.path.join(BACKUP_DIR, latest_backup)
+    return restore_backup(backups[0]['filename'])
+
+def get_available_backups():
+    """
+    Retorna una lista de diccionarios con info de los backups disponibles.
+    Ordenados del más reciente al más antiguo.
+    """
+    if not os.path.exists(BACKUP_DIR):
+        return []
     
+    files = [f for f in os.listdir(BACKUP_DIR) if f.startswith(CONFIG_FILE) and f.endswith('.bak')]
+    if not files:
+        return []
+    
+    backups = []
+    for f in files:
+        # Extraer timestamp del nombre: costos_config.json_YYYYMMDD_HHMMSS.bak
+        try:
+            parts = f.replace(CONFIG_FILE + '_', '').replace('.bak', '').split('_')
+            date_str = parts[0]
+            time_str = parts[1]
+            # Formatear para humanos
+            dt = datetime.strptime(f"{date_str}{time_str}", "%Y%m%d%H%M%S")
+            readable_date = dt.strftime("%d/%m/%Y %H:%M:%S")
+            
+            backups.append({
+                "filename": f,
+                "date": readable_date,
+                "timestamp": dt
+            })
+        except Exception:
+            continue
+            
+    # Ordenar por timestamp descendente
+    backups.sort(key=lambda x: x['timestamp'], reverse=True)
+    return backups
+
+def restore_backup(filename):
+    """
+    Restaura un archivo de backup específico.
+    """
+    backup_full_path = os.path.join(BACKUP_DIR, filename)
+    if not os.path.exists(backup_full_path):
+        return False
+        
     try:
         shutil.copy2(backup_full_path, CONFIG_FILE)
         return True

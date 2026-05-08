@@ -1,11 +1,11 @@
 import streamlit as st
 import pandas as pd
 from prices_logic import (
-load_excel_data, get_cost, determine_subtariff, TARIFFS, 
-load_production_costs, save_production_costs, get_production_costs, 
-get_production_costs_detailed, load_barcode_data, load_product_materia_prima, 
-save_product_materia_prima, get_current_exchange_rate, get_packaging_price,
-restore_latest_backup
+    load_excel_data, get_cost, determine_subtariff, TARIFFS, 
+    load_production_costs, save_production_costs, get_production_costs, 
+    get_production_costs_detailed, load_barcode_data, load_product_materia_prima, 
+    save_product_materia_prima, get_current_exchange_rate, get_packaging_price,
+    restore_latest_backup, get_available_backups, restore_backup
 )
 from report_generator import generate_pdf
 
@@ -565,13 +565,27 @@ with col_lab:
 
     # Opción de restauración
     with st.expander("🛡️ Seguridad y Copias"):
-        st.caption("Cada vez que guardas, se crea una copia de seguridad automática.")
-        if st.button("⏪ Restaurar Última Copia (Deshacer)", use_container_width=True):
-            if restore_latest_backup():
-                st.success("¡Backup restaurado con éxito!")
-                st.rerun()
-            else:
-                st.warning("No se encontraron copias de seguridad para restaurar.")
+        st.caption("Cada vez que guardas cambios en el laboratorio, se crea una copia de seguridad automática.")
+        
+        backups_list = get_available_backups()
+        if not backups_list:
+            st.info("No se han encontrado copias de seguridad aún.")
+        else:
+            # Crear opciones legibles
+            backup_options = {f"Copia del {b['date']}": b['filename'] for b in backups_list[:10]} # Mostrar últimas 10
+            selected_label = st.selectbox("Selecciona una versión para restaurar:", list(backup_options.keys()))
+            selected_filename = backup_options[selected_label]
+            
+            col_res1, col_res2 = st.columns([1, 1])
+            with col_res1:
+                if st.button("⏪ Restaurar Versión Seleccionada", use_container_width=True, type="primary"):
+                    if restore_backup(selected_filename):
+                        st.success(f"¡Versión del {selected_label.split('del ')[1]} restaurada!")
+                        st.rerun()
+                    else:
+                        st.error("Error al restaurar.")
+            with col_res2:
+                st.caption("⚠️ Al restaurar, se sobrescribirá la configuración actual del laboratorio.")
 
 with col_desglose:
     st.markdown("### 📊 Desglose de Costos (Actual)")
