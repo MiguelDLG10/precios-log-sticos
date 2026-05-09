@@ -8,6 +8,8 @@ from prices_logic import (
     restore_latest_backup, get_available_backups, restore_backup
 )
 from report_generator import generate_pdf
+import plotly.express as px
+import plotly.graph_objects as go
 
 # --- Configuración de Página ---
 st.set_page_config(page_title="Organizador de Precios", layout="wide", page_icon="📦")
@@ -639,6 +641,136 @@ with col_desglose:
     else:
         st.info("No hay desglose de costos asignado.")
 
+# --- NUEVA SECCIÓN: GRÁFICAS DINÁMICAS (FUERA DE COLUMNAS PARA MÁXIMO ESPACIO) ---
+if costo_produccion_usd_litro > 0:
+    st.markdown("---")
+    st.markdown("### 📊 Análisis Visual de Costos")
+    
+    # 1. Gráfica de Dona: Distribución de Costo
+    labels = []
+    values = []
+    for name, usd_cost in desglose_dict["Prorrateables"].items():
+        labels.append(f"Fijo: {name}")
+        values.append(usd_cost * paridad_usd)
+    for name, usd_cost in desglose_dict["Variables"].items():
+        labels.append(f"Var: {name}")
+        values.append(usd_cost * paridad_usd)
+    if costo_envase_unit_mxn > 0:
+        labels.append("Empaque: Envase")
+        values.append(costo_envase_unit_mxn / capacidad_l)
+
+    fig_donut = px.pie(
+        names=labels, 
+        values=values, 
+        hole=0.4,
+        title="Distribución Detallada de la Inversión (MXN / Litro)",
+        color_discrete_sequence=px.colors.qualitative.Dark24
+    )
+    # Etiquetas externas y limpieza de hover
+    fig_donut.update_traces(
+        textposition='outside', 
+        textinfo='percent+label',
+        marker=dict(line=dict(color='#0f172a', width=2)),
+        pull=[0.05] * len(labels),
+        hovertemplate="<b>%{label}</b><br>Costo: $%{value:.3f}<br>Porcentaje: %{percent}<extra></extra>"
+    )
+    fig_donut.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color="#ffffff",
+        margin=dict(t=100, b=150, l=50, r=50),
+        legend=dict(
+            orientation="h", 
+            yanchor="top", 
+            y=-0.1, 
+            xanchor="center", 
+            x=0.5,
+            font=dict(size=12),
+            itemwidth=40 # Aumentar espacio entre items
+        ),
+        height=700
+    )
+    st.plotly_chart(fig_donut, use_container_width=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # 2. Gráfica de Líneas: Economía de Escala
+    st.info("💡 **Análisis de Escalabilidad:** Esta gráfica proyecta cómo tu rentabilidad aumenta al optimizar el volumen. El punto rosa es tu escenario actual.")
+    
+    volumes = [20, 50, 100, 250, 500, 750, 1000, 1500, 2000, 5000]
+    costs_per_vol = []
+    for v in volumes:
+        c_usd, _ = get_production_costs_detailed(v, categoria_prod, materia_prima_input_usd)
+        c_mxn = (c_usd * paridad_usd) + (costo_envase_unit_mxn / capacidad_l)
+        costs_per_vol.append(c_mxn)
+    
+    fig_scale = go.Figure()
+    
+    # Línea de tendencia
+    fig_scale.add_trace(go.Scatter(
+        x=volumes, y=costs_per_vol,
+        mode='lines+markers',
+        line=dict(color='#67e8f9', width=5, shape='spline'), # Spline para curva suave
+        marker=dict(size=12, color='#ffffff', line=dict(width=3, color='#67e8f9')),
+        name="Curva de Costo",
+        hovertemplate="Volumen: %{x}L<br>Costo: $%{y:.2f}/Lt<extra></extra>"
+    ))
+    
+    # Punto actual destacado con anotación
+    fig_scale.add_trace(go.Scatter(
+        x=[litros_totales], y=[total_mxn_lt],
+        mode='markers',
+        marker=dict(size=25, color='#f472b6', symbol='star', line=dict(color='white', width=3)),
+        name="POSICIÓN ACTUAL",
+        hovertemplate="TU ESCENARIO ACTUAL<br>Volumen: %{x}L<br>Costo: $%{y:.2f}/Lt<extra></extra>"
+    ))
+    
+    # Anotación descriptiva
+    fig_scale.add_annotation(
+        x=litros_totales, y=total_mxn_lt,
+        text="ESTÁS AQUÍ",
+        showarrow=True,
+        arrowhead=2,
+        ax=0, ay=-50,
+        bgcolor="#f472b6",
+        font=dict(color="white", size=14, family="Inter")
+    )
+    
+    # Referencia de "Zona de Máxima Utilidad"
+    min_cost = min(costs_per_vol)
+    max_vol = max(volumes)
+    fig_scale.add_annotation(
+        x=max_vol, y=min_cost,
+        text=f"MÁXIMO AHORRO: ${min_cost:.2f}/Lt",
+        showarrow=True,
+        arrowhead=1,
+        ax=-100, ay=30,
+        bgcolor="#4ade80",
+        font=dict(color="black", size=12)
+    )
+    
+    fig_scale.update_layout(
+        title={
+            'text': "Análisis de Economía de Escala: Optimización de Costos por Volumen",
+            'y':0.95, 'x':0.5, 'xanchor': 'center', 'yanchor': 'top'
+        },
+        xaxis_title="Capacidad de Producción (Litros Totales)",
+        yaxis_title="Costo de Producción Integrado (MXN / Litro)",
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(30, 41, 59, 0.4)',
+        font_color="#ffffff",
+        margin=dict(t=100, b=60, l=80, r=80),
+        hovermode="x unified",
+        height=600,
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+    
+    fig_scale.update_xaxes(showgrid=True, gridwidth=1, gridcolor='rgba(255,255,255,0.1)', tickformat=",d")
+    fig_scale.update_yaxes(showgrid=True, gridwidth=1, gridcolor='rgba(255,255,255,0.1)', tickprefix="$")
+    
+    st.plotly_chart(fig_scale, use_container_width=True)
+
 st.markdown("### ⚖️ Cálculo de Empaque")
 col_w1, col_w2, col_w3 = st.columns(3)
 with col_w1:
@@ -698,12 +830,48 @@ with col_plat2:
 with col_plat3:
     st.markdown(create_platform_card("PaqueteExpress", "🚚", costo_px_total, f"Zona: {zona_px}", precio_venta_total, costo_produccion_total_mxn), unsafe_allow_html=True)
 
+# --- Gráfica de Comparativa de Utilidad ---
+st.markdown("#### 📈 Comparativa de Utilidad Neta")
+platforms = ["Mercado Libre", "Amazon", "PaqueteExpress"]
+utilidades = []
+for p, c in zip(platforms, [costo_ml_total, costo_amz_total, costo_px_total]):
+    safe_c = c if (c and c > 0) else 0
+    utilidades.append(precio_venta_total - (safe_c + costo_produccion_total_mxn))
+
+fig_profit = px.bar(
+    x=platforms, 
+    y=utilidades,
+    color=platforms,
+    text=[f"${u:,.2f}" for u in utilidades],
+    title="Utilidad Neta Estimada por Plataforma",
+    labels={'x': 'Plataforma', 'y': 'Utilidad MXN'},
+    color_discrete_map={
+        "Mercado Libre": "#ffe600",
+        "Amazon": "#ff9900",
+        "PaqueteExpress": "#0056b3"
+    }
+)
+fig_profit.update_layout(
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(30, 41, 59, 0.3)',
+    font_color="#ffffff",
+    showlegend=False,
+    margin=dict(t=60, b=40, l=40, r=40),
+    height=450
+)
+fig_profit.update_traces(textposition='outside', textfont_size=14)
+fig_profit.update_yaxes(showgrid=True, gridwidth=1, gridcolor='rgba(255,255,255,0.1)')
+st.plotly_chart(fig_profit, use_container_width=True)
+
 st.markdown("<br><center><p style='color: #e2e8f0 !important; font-size: 1.1rem !important; opacity: 0.85;'>Las tarifas logísticas son aproximadas. Costos de producción basados en configuración interna PIZARRON.</p></center>", unsafe_allow_html=True)
+
+import os
+import tempfile
 
 # --- Generación de Reporte PDF ---
 st.markdown("---")
 st.markdown("### 📄 Generar Reporte de Cotización")
-st.markdown("Descarga un informe con desglose logístico (próximamente versión completa con costos de producción).")
+st.markdown("Descarga un informe completo que incluye el desglose de costos, cotizaciones logísticas y gráficas de análisis.")
 
 report_data = {
     "envase": envase_seleccionado,
@@ -727,15 +895,54 @@ report_data = {
     ]
 }
 
+# Preparar gráficas para el PDF
+charts_images = {}
+try:
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # Configuración común para exportación HD
+        export_config = dict(scale=3, engine="kaleido") # Scale=3 triplica la resolución
 
+        # 1. Distribución de Costo
+        donut_path = os.path.join(tmp_dir, "donut.png")
+        fig_donut_pdf = go.Figure(fig_donut)
+        fig_donut_pdf.update_layout(
+            paper_bgcolor='white', 
+            plot_bgcolor='white', 
+            font_color="black",
+            margin=dict(t=100, b=100, l=50, r=50)
+        )
+        fig_donut_pdf.write_image(donut_path, **export_config)
+        charts_images["Distribución de Costo por Litro"] = donut_path
+        
+        # 2. Economía de Escala
+        scale_path = os.path.join(tmp_dir, "scale.png")
+        fig_scale_pdf = go.Figure(fig_scale)
+        fig_scale_pdf.update_layout(paper_bgcolor='white', plot_bgcolor='white', font_color="black")
+        fig_scale_pdf.update_xaxes(gridcolor='lightgrey')
+        fig_scale_pdf.update_yaxes(gridcolor='lightgrey')
+        fig_scale_pdf.write_image(scale_path, **export_config)
+        charts_images["Impacto del Volumen (Economía de Escala)"] = scale_path
+        
+        # 3. Comparativa de Utilidad
+        profit_path = os.path.join(tmp_dir, "profit.png")
+        fig_profit_pdf = go.Figure(fig_profit)
+        fig_profit_pdf.update_layout(paper_bgcolor='white', plot_bgcolor='white', font_color="black")
+        fig_profit_pdf.update_yaxes(gridcolor='lightgrey')
+        fig_profit_pdf.write_image(profit_path, **export_config)
+        charts_images["Comparativa de Utilidad por Plataforma"] = profit_path
 
-pdf_bytes = generate_pdf(report_data)
+        # Generar el PDF con las imágenes antes de que el directorio temporal se borre
+        pdf_bytes = generate_pdf(report_data, charts=charts_images)
+except Exception as e:
+    st.warning(f"Nota: No se pudieron incluir las gráficas en el PDF ({e}). Generando reporte solo texto.")
+    pdf_bytes = generate_pdf(report_data)
 
 st.download_button(
-    label="🔽 Descargar Reporte en PDF",
+    label="🔽 Descargar Reporte Completo (PDF)",
     data=pdf_bytes,
-    file_name="reporte_costos_logisticos.pdf",
+    file_name=f"Reporte_Costos_{envase_seleccionado.split('(')[0].strip()}.pdf",
     mime="application/pdf",
-    type="primary"
+    type="primary",
+    use_container_width=True
 )
 

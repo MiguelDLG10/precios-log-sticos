@@ -69,7 +69,7 @@ class LogisticsReport(FPDF):
             self.ln()
         self.ln(6)
 
-def generate_pdf(data):
+def generate_pdf(data, charts=None):
     pdf = LogisticsReport()
     pdf.add_page()
     
@@ -193,6 +193,26 @@ def generate_pdf(data):
         breakdown_str = f"   (Ingreso: ${data['precio_venta_total']:,.2f} | Produccion: ${data['costo_prod_mxn']:,.2f} | Logistica: ${safe_cost:,.2f})"
         pdf.cell(0, 8, breakdown_str, border='BLR', ln=True, fill=True)
         pdf.ln(5)
+
+    # 7. NUEVA SECCIÓN: Análisis Visual (Gráficas)
+    if charts:
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 14)
+        pdf.set_text_color(30, 27, 75)
+        pdf.cell(0, 10, "Analisis Visual de Costos", ln=True)
+        pdf.ln(5)
+        
+        for title, img_path in charts.items():
+            if os.path.exists(img_path):
+                # Verificar espacio disponible para la imagen
+                if pdf.get_y() > 180:
+                    pdf.add_page()
+                
+                pdf.set_font("Arial", "B", 11)
+                pdf.set_text_color(50, 50, 50)
+                pdf.cell(0, 8, title, ln=True)
+                pdf.image(img_path, w=170)
+                pdf.ln(10)
 
     # Output pdf file temporarily and read bytes
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
