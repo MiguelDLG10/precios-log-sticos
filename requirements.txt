@@ -4,4 +4,4 @@ openpyxl
 fpdf
 requests
 plotly
-kaleido
+kaleido==0.2.1
